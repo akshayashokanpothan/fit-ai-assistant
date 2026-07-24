@@ -279,7 +279,7 @@ export default function AIPage() {
           </button>
           <Textarea
             rows={1}
-            placeholder="Ask anything, or log what you ate…"
+            placeholder="What's on your mind?"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
