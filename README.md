@@ -83,7 +83,8 @@ Uploaded food images and fitness screenshots are meant to be retained for a
 maximum of **24 hours**. `GET /api/cron/cleanup-media` deletes expired rows
 and their Storage objects once Supabase is configured; it's a no-op in demo
 mode. Schedule it with **Vercel Cron** (`vercel.json` already points at it
-hourly) — set `CRON_SECRET` in your Vercel project and Vercel will send the
+once daily, at 03:00 UTC — Vercel Hobby plan only supports daily cron
+frequency) — set `CRON_SECRET` in your Vercel project and Vercel will send the
 matching `Authorization: Bearer` header automatically. Alternatively, call
 the same logic from a Supabase scheduled Edge Function.
 
