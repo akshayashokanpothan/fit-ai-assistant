@@ -1,4 +1,4 @@
-# Sahaay — AI Fitness Companion
+# Pace AI — Fitness Companion
 
 A mobile-first, conversational AI fitness companion for beginners, built
 India-first. Conversation is the primary surface — meals, workouts, and

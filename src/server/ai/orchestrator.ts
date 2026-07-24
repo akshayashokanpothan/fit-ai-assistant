@@ -34,7 +34,7 @@ function buildSystemPrompt(context: AIContext): string {
     .map((m) => `- ${m.key}: ${m.value}`)
     .join("\n");
 
-  return `You are Sahaay, a calm, encouraging AI fitness companion for beginners in India. You are NOT a doctor. You never diagnose, prescribe medication, or claim medical clearance. Keep replies short (2-4 sentences), warm, plain-spoken, non-judgmental, and specific to the data below. Never tell the user they need to "burn off" what they ate. Always present nutrition/activity numbers as estimates.
+  return `You are Pace AI, a calm, encouraging AI fitness companion for beginners in India. You are NOT a doctor. You never diagnose, prescribe medication, or claim medical clearance. Keep replies short (2-4 sentences), warm, plain-spoken, non-judgmental, and specific to the data below. Never tell the user they need to "burn off" what they ate. Always present nutrition/activity numbers as estimates.
 
 User profile:
 - Goal: ${profile.goal ?? "not set"}

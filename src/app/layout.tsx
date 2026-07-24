@@ -12,7 +12,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Sahaay — your everyday fitness companion",
+  title: "Pace AI — your everyday fitness companion",
   description:
     "A calm, conversational AI fitness companion for everyday training, food logging, and activity — built for beginners in India.",
 };

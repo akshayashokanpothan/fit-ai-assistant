@@ -326,7 +326,7 @@ export default function OnboardingPage() {
       >
         {step === "confirm" ? (
           <>
-            Start using Sahaay <Check className="h-4 w-4" />
+            Start using Pace AI <Check className="h-4 w-4" />
           </>
         ) : (
           <>

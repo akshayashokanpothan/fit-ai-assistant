@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────
--- Sahaay AI Fitness Companion — initial schema
+-- Pace AI Fitness Companion — initial schema
 -- Run via `supabase db push` or the Supabase SQL editor.
 -- ─────────────────────────────────────────────────────────────────────────
 

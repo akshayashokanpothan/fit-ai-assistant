@@ -40,7 +40,7 @@ import { sumNutrition } from "@/lib/nutrition/seed-foods";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { formatISO } from "date-fns";
 
-const STORAGE_KEY = "sahaay_demo_state_v1";
+const STORAGE_KEY = "pace_demo_state_v1";
 
 interface DemoState {
   onboardingComplete: boolean;
