@@ -15,7 +15,10 @@ type Intent =
 function detectIntent(text: string): Intent {
   const t = text.toLowerCase();
   if (/(plan (my )?next|3.?day|three.?day)/.test(t)) return "plan_3day";
-  if (/(today'?s? workout|what should i (do|train)|workout (today|now)|at the gym)/.test(t))
+  if (
+    /(today'?s? workout|what should i (do|train)|workout (today|now)|at the gym)/.test(t) ||
+    (t.includes("workout") && (t.includes("today") || t.includes("gym") || t.includes("should")))
+  )
     return "workout_today";
   if (/(how am i doing|how did i do|summary|recap)/.test(t)) return "today_summary";
   if (/(what should i eat|eat today|meal (plan|idea)|hungry|replace|don'?t have|swap)/.test(t))

@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tailwindcss-animate" layer(utilities);
 
 :root {
   --paper: #f5f6f3;

@@ -58,7 +58,7 @@ export function createMockProvider(): AIProvider {
 
     async generateText(input: GenerateTextInput): Promise<GenerateTextOutput> {
       const lastUser = [...input.messages].reverse().find((m) => m.role === "user");
-      const text = mockConversationalReply(lastUser?.content ?? "", input.system);
+      const text = mockConversationalReply(lastUser?.content ?? "");
       return { text };
     },
 
@@ -87,7 +87,7 @@ export function createMockProvider(): AIProvider {
   };
 }
 
-function mockConversationalReply(userText: string, system: string): string {
+function mockConversationalReply(userText: string): string {
   const t = userText.toLowerCase();
 
   if (t.includes("workout") && (t.includes("today") || t.includes("gym") || t.includes("do"))) {

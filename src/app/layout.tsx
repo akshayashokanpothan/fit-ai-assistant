@@ -5,7 +5,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/fraunces/400.css";
 import "@fontsource/fraunces/500.css";
 import "@fontsource/fraunces/600.css";
-import "@fontsource/fraunces/opsz-italic.css";
+import "@fontsource/fraunces/400-italic.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";

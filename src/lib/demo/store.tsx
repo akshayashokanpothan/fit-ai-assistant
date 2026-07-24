@@ -155,9 +155,16 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // Deliberate one-time hydration read: localStorage is only available
+    // client-side, so state must start from the seed default (matching the
+    // server-rendered HTML) and then sync from storage after mount. The
+    // `hydrated` flag gates all rendering until this completes, so there is
+    // no visible flash/mismatch — this is the standard SSR-safe pattern for
+    // synchronizing from an external, synchronous browser API.
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(JSON.parse(raw));
       }
     } catch {
