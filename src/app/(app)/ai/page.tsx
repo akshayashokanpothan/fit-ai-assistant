@@ -201,7 +201,7 @@ export default function AIPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col">
+    <div className="flex h-[calc(100vh-120px)] flex-col">
       <div className="flex-1 overflow-y-auto px-4 pt-5">
         <div className="space-y-5 pb-4">
           {state.messages.map((m) => (

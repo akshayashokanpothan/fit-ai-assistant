@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { BottomNav } from "@/components/bottom-nav";
+import { TopBar } from "@/components/top-bar";
 
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col bg-paper">
+      <TopBar />
       <main className="flex-1 pb-2">{children}</main>
       <BottomNav />
     </div>

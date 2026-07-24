@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar } from "@/components/avatar";
+import { resizeImageToDataUrl } from "@/lib/image-utils";
 import { cn } from "@/lib/utils";
 import type {
   DietPreference,
@@ -19,6 +21,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 type StepId =
   | "welcome"
+  | "photo"
   | "goal"
   | "body"
   | "experience"
@@ -30,6 +33,7 @@ type StepId =
 
 const STEPS: StepId[] = [
   "welcome",
+  "photo",
   "goal",
   "body",
   "experience",
@@ -76,6 +80,9 @@ export default function OnboardingPage() {
   const step = STEPS[stepIndex];
 
   const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [age, setAge] = useState("");
   const [sex, setSex] = useState<"male" | "female" | "other" | null>(null);
@@ -87,8 +94,24 @@ export default function OnboardingPage() {
   const [diet, setDiet] = useState<DietPreference | null>(null);
   const [limitations, setLimitations] = useState("");
 
+  async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAvatarBusy(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      setAvatarUrl(dataUrl);
+    } catch {
+      // Optional field — silently ignore and let the user continue without a photo.
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   const canAdvance: Record<StepId, boolean> = {
     welcome: displayName.trim().length > 0,
+    photo: true,
     goal: !!goal,
     body: !!age && !!heightCm && !!weightKg && !!sex,
     experience: !!experience,
@@ -103,6 +126,7 @@ export default function OnboardingPage() {
     if (step === "confirm") {
       completeOnboarding({
         displayName,
+        avatarUrl,
         goal: goal!,
         age: Number(age),
         sex: sex!,
@@ -163,6 +187,38 @@ export default function OnboardingPage() {
               autoFocus
             />
           </div>
+        )}
+
+        {step === "photo" && (
+          <StepShell
+            title="Add a photo?"
+            subtitle="Totally optional — you can skip this and add one later from Profile."
+          >
+            <div className="flex flex-col items-center gap-4 pt-2">
+              <Avatar src={avatarUrl} size={96} />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  disabled={avatarBusy}
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  {avatarBusy ? "Uploading…" : avatarUrl ? "Change photo" : "Add photo"}
+                </Button>
+                {avatarUrl && (
+                  <Button variant="ghost" onClick={() => setAvatarUrl(null)}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onAvatarSelected}
+              />
+            </div>
+          </StepShell>
         )}
 
         {step === "goal" && (

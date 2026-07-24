@@ -20,6 +20,11 @@ export interface Profile {
   id: string;
   userId: string;
   displayName: string | null;
+  // Optional profile photo. In demo mode this holds a resized, base64 data
+  // URL persisted to localStorage. Once Supabase Storage is wired up this
+  // will hold a Storage URL/path instead — no UI change required for that
+  // transition, since consumers just render whatever string is here.
+  avatarUrl?: string | null;
   goal: Goal | null;
   age: number | null;
   sex: "male" | "female" | "other" | null;

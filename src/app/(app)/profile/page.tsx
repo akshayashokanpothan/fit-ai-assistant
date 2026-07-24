@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar } from "@/components/avatar";
+import { resizeImageToDataUrl } from "@/lib/image-utils";
 import { cn } from "@/lib/utils";
 import type {
   DietPreference,
@@ -60,6 +62,29 @@ export default function ProfilePage() {
   });
   const [saved, setSaved] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAvatarError(null);
+    setAvatarBusy(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      updateProfile({ avatarUrl: dataUrl });
+    } catch {
+      setAvatarError("Couldn't use that photo — try a different image.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  function removeAvatar() {
+    updateProfile({ avatarUrl: null });
+  }
 
   function save() {
     const newWeight = Number(form.weightKg) || p.weightKg;
@@ -88,6 +113,36 @@ export default function ProfilePage() {
       <p className="mt-1 text-sm text-ink-soft">
         This is what I use to personalise everything — keep it up to date.
       </p>
+
+      <div className="mt-6 flex items-center gap-4">
+        <Avatar src={p.avatarUrl} size={64} />
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={avatarBusy}
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              {avatarBusy ? "Uploading…" : "Change photo"}
+            </Button>
+            {p.avatarUrl && (
+              <Button variant="ghost" size="sm" onClick={removeAvatar}>
+                Remove
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted">Optional — used only in the top bar and here.</p>
+          {avatarError && <p className="text-xs text-danger">{avatarError}</p>}
+        </div>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onAvatarSelected}
+        />
+      </div>
 
       <Section title="About you">
         <Field label="Name">
