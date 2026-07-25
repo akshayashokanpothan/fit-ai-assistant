@@ -60,11 +60,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
+      // Prefer the pinned canonical site URL so the confirmation email
+      // always points at the stable production domain, not whatever
+      // ephemeral Vercel preview/deployment origin the signup happened to
+      // be triggered from. Falls back to the current origin for local dev,
+      // where window.location.origin (localhost) is already stable.
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      // Targets /auth/confirm (token_hash + verifyOtp) — the production
+      // flow, paired with a custom "Confirm signup" email template sent via
+      // Resend custom SMTP. /auth/callback is reserved for future
+      // OAuth/PKCE providers (Google, Apple, etc.), not email confirmation.
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${siteUrl}/auth/confirm`,
         },
       });
       return { error: error?.message ?? null };
