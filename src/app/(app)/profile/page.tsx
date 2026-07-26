@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useProfile } from "@/lib/profile/profile-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,22 +47,54 @@ const FREQUENCIES: TrainingFrequency[] = [2, 3, 4, 5, 6];
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { state, updateProfile, addBodyMetric, resetDemo } = useDemoStore();
-  const p = state.profile;
+  const { user } = useAuth();
+  const { profile, updateProfile: saveProfile } = useProfile();
+  // Avatar has no public.profiles column yet, and meals/workouts/activity/
+  // body-metric-history/reset are out of Phase 2's scope — those stay on
+  // the demo store exactly as before.
+  const { state, updateProfile: updateDemoProfile, addBodyMetric, resetDemo } = useDemoStore();
 
   const [form, setForm] = useState({
-    displayName: p.displayName ?? "",
-    goal: p.goal,
-    age: p.age?.toString() ?? "",
-    heightCm: p.heightCm?.toString() ?? "",
-    weightKg: p.weightKg?.toString() ?? "",
-    experience: p.experience,
-    environment: p.environment,
-    frequencyPerWeek: p.frequencyPerWeek,
-    dietPreference: p.dietPreference,
-    limitations: p.limitations ?? "",
+    displayName: profile?.displayName ?? "",
+    goal: profile?.goal ?? null,
+    age: profile?.age?.toString() ?? "",
+    heightCm: profile?.heightCm?.toString() ?? "",
+    weightKg: profile?.weightKg?.toString() ?? "",
+    experience: profile?.experience ?? null,
+    environment: profile?.environment ?? null,
+    frequencyPerWeek: profile?.frequencyPerWeek ?? null,
+    dietPreference: profile?.dietPreference ?? null,
+    limitations: profile?.limitations ?? "",
   });
+
+  // Keep the form in sync whenever the persisted profile changes — covers
+  // both the initial async load (profile arrives after this component's
+  // first render, in case the parent layout's own gating ever changes) and
+  // any refetch/save round-trip.
+  useEffect(() => {
+    if (!profile) return;
+    // Deliberate sync from an external, asynchronously-loaded source (the
+    // Supabase profile) into local editable draft state — the form needs
+    // its own mutable copy for uncommitted edits, so this can't be pure
+    // derived state. Same justified exception as elsewhere in this app.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm({
+      displayName: profile.displayName ?? "",
+      goal: profile.goal,
+      age: profile.age?.toString() ?? "",
+      heightCm: profile.heightCm?.toString() ?? "",
+      weightKg: profile.weightKg?.toString() ?? "",
+      experience: profile.experience,
+      environment: profile.environment,
+      frequencyPerWeek: profile.frequencyPerWeek,
+      dietPreference: profile.dietPreference,
+      limitations: profile.limitations ?? "",
+    });
+  }, [profile]);
+
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -74,7 +108,7 @@ export default function ProfilePage() {
     setAvatarBusy(true);
     try {
       const dataUrl = await resizeImageToDataUrl(file);
-      updateProfile({ avatarUrl: dataUrl });
+      updateDemoProfile({ avatarUrl: dataUrl });
     } catch {
       setAvatarError("Couldn't use that photo — try a different image.");
     } finally {
@@ -83,16 +117,19 @@ export default function ProfilePage() {
   }
 
   function removeAvatar() {
-    updateProfile({ avatarUrl: null });
+    updateDemoProfile({ avatarUrl: null });
   }
 
-  function save() {
-    const newWeight = Number(form.weightKg) || p.weightKg;
-    updateProfile({
+  async function save() {
+    if (!profile) return;
+    setSaveError(null);
+    setSaving(true);
+    const newWeight = Number(form.weightKg) || profile.weightKg;
+    const { error } = await saveProfile({
       displayName: form.displayName,
       goal: form.goal,
-      age: Number(form.age) || p.age,
-      heightCm: Number(form.heightCm) || p.heightCm,
+      age: Number(form.age) || profile.age,
+      heightCm: Number(form.heightCm) || profile.heightCm,
       weightKg: newWeight,
       experience: form.experience,
       environment: form.environment,
@@ -100,11 +137,27 @@ export default function ProfilePage() {
       dietPreference: form.dietPreference,
       limitations: form.limitations.trim() || null,
     });
-    if (newWeight && newWeight !== p.weightKg) {
+    setSaving(false);
+    if (error) {
+      setSaveError(error);
+      return;
+    }
+    if (newWeight && newWeight !== profile.weightKg) {
       addBodyMetric(newWeight);
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  // The parent (app) layout only renders this page once the profile has
+  // finished loading for a signed-in, onboarded user, so this is a
+  // defensive fallback rather than the expected path.
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
+      </div>
+    );
   }
 
   return (
@@ -115,7 +168,7 @@ export default function ProfilePage() {
       </p>
 
       <div className="mt-6 flex items-center gap-4">
-        <Avatar src={p.avatarUrl} size={64} />
+        <Avatar src={state.profile.avatarUrl} size={64} />
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
             <Button
@@ -126,7 +179,7 @@ export default function ProfilePage() {
             >
               {avatarBusy ? "Uploading…" : "Change photo"}
             </Button>
-            {p.avatarUrl && (
+            {state.profile.avatarUrl && (
               <Button variant="ghost" size="sm" onClick={removeAvatar}>
                 Remove
               </Button>
@@ -235,8 +288,10 @@ export default function ProfilePage() {
         />
       </Section>
 
-      <Button className="mt-6 w-full" onClick={save}>
-        {saved ? (
+      <Button className="mt-6 w-full" onClick={save} disabled={saving}>
+        {saving ? (
+          "Saving…"
+        ) : saved ? (
           <>
             <Check className="h-4 w-4" /> Saved
           </>
@@ -244,6 +299,7 @@ export default function ProfilePage() {
           "Save changes"
         )}
       </Button>
+      {saveError && <p className="mt-2 text-center text-sm text-danger">{saveError}</p>}
 
       <Section title="Privacy & data">
         <div className="flex items-start gap-2 rounded-[var(--radius-md)] bg-primary-soft p-3 text-xs text-primary">
@@ -274,7 +330,7 @@ export default function ProfilePage() {
                 className="flex-1"
                 onClick={() => {
                   resetDemo();
-                  router.replace("/onboarding");
+                  router.replace("/today");
                 }}
               >
                 Confirm reset
@@ -294,8 +350,7 @@ export default function ProfilePage() {
 
       <Section title="Account">
         <p className="text-sm text-ink-soft">
-          Signed in as <span className="font-medium text-ink">demo account</span>. Real
-          authentication connects here once Supabase is configured.
+          Signed in as <span className="font-medium text-ink">{user?.email}</span>.
         </p>
       </Section>
     </div>

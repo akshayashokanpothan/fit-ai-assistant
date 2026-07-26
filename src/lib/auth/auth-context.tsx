@@ -26,11 +26,11 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Auth session provider. This is deliberately independent from
- * `DemoStoreProvider` (`src/lib/demo/store.tsx`) — Phase 2A only
- * establishes who is signed in via Supabase; it does not yet gate routes,
- * read/write `public.profiles`, or replace the demo/localStorage data the
- * rest of the app still runs on. That wiring is Phase 2B/2C.
+ * Auth session provider. Deliberately independent from `DemoStoreProvider`
+ * (`src/lib/demo/store.tsx`) and from `ProfileProvider`
+ * (`src/lib/profile/profile-context.tsx`), which consumes `useAuth()` but
+ * does not feed state back into this provider — this file owns Supabase
+ * session/auth state only, nothing about `public.profiles`.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);

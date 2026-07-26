@@ -2,20 +2,30 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useProfile } from "@/lib/profile/profile-context";
 import { BottomNav } from "@/components/bottom-nav";
 import { TopBar } from "@/components/top-bar";
 
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { state, hydrated } = useDemoStore();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+
+  const resolved = !authLoading && !profileLoading;
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!state.onboardingComplete) router.replace("/onboarding");
-  }, [hydrated, state.onboardingComplete, router]);
+    if (!resolved) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (!profile?.onboardingCompletedAt) {
+      router.replace("/onboarding");
+    }
+  }, [resolved, user, profile, router]);
 
-  if (!hydrated) {
+  if (!resolved || !user || !profile?.onboardingCompletedAt) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />

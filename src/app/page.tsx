@@ -2,16 +2,27 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useProfile } from "@/lib/profile/profile-context";
 
 export default function RootPage() {
   const router = useRouter();
-  const { state, hydrated } = useDemoStore();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
 
   useEffect(() => {
-    if (!hydrated) return;
-    router.replace(state.onboardingComplete ? "/ai" : "/onboarding");
-  }, [hydrated, state.onboardingComplete, router]);
+    if (authLoading || profileLoading) return;
+
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    // profile is guaranteed non-null once ProfileProvider finishes loading
+    // for a signed-in user (it creates one on first access) — the
+    // onboarding_completed_at check defaults safely to "incomplete" if it
+    // were ever unexpectedly null.
+    router.replace(profile?.onboardingCompletedAt ? "/today" : "/onboarding");
+  }, [authLoading, profileLoading, user, profile, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper">

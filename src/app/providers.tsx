@@ -2,11 +2,14 @@
 
 import { DemoStoreProvider } from "@/lib/demo/store";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { ProfileProvider } from "@/lib/profile/profile-context";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <DemoStoreProvider>{children}</DemoStoreProvider>
+      <ProfileProvider>
+        <DemoStoreProvider>{children}</DemoStoreProvider>
+      </ProfileProvider>
     </AuthProvider>
   );
 }

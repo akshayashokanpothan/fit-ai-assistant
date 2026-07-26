@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useProfile } from "@/lib/profile/profile-context";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -75,7 +77,13 @@ const DIETS: { value: DietPreference; label: string }[] = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { completeOnboarding } = useDemoStore();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading, completeOnboarding } = useProfile();
+  // Avatar has no column in public.profiles yet (Storage is a future
+  // phase), so it's the one field that still goes through the demo store —
+  // see the comment near the submit handler below.
+  const { updateProfile: updateDemoProfile } = useDemoStore();
+
   const [stepIndex, setStepIndex] = useState(0);
   const step = STEPS[stepIndex];
 
@@ -93,6 +101,23 @@ export default function OnboardingPage() {
   const [frequency, setFrequency] = useState<TrainingFrequency | null>(null);
   const [diet, setDiet] = useState<DietPreference | null>(null);
   const [limitations, setLimitations] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Onboarding requires a signed-in user to persist anything — send an
+  // unauthenticated visitor to sign in first. Once auth/profile resolve, an
+  // already-onboarded user landing here (e.g. via back button) is sent on
+  // to /today rather than redoing onboarding.
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (profile?.onboardingCompletedAt) {
+      router.replace("/today");
+    }
+  }, [authLoading, profileLoading, user, profile, router]);
 
   async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -124,24 +149,38 @@ export default function OnboardingPage() {
 
   function next() {
     if (step === "confirm") {
-      completeOnboarding({
-        displayName,
-        avatarUrl,
-        goal: goal!,
-        age: Number(age),
-        sex: sex!,
-        heightCm: Number(heightCm),
-        weightKg: Number(weightKg),
-        experience: experience!,
-        environment: environment!,
-        frequencyPerWeek: frequency!,
-        dietPreference: diet!,
-        limitations: limitations.trim() || null,
-      });
-      router.replace("/ai");
+      submit();
       return;
     }
     setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+  }
+
+  async function submit() {
+    setSubmitError(null);
+    setSubmitting(true);
+    const { error } = await completeOnboarding({
+      displayName,
+      goal,
+      age: Number(age),
+      sex,
+      heightCm: Number(heightCm),
+      weightKg: Number(weightKg),
+      experience,
+      environment,
+      frequencyPerWeek: frequency,
+      dietPreference: diet,
+      limitations: limitations.trim() || null,
+    });
+    if (error) {
+      setSubmitError(error);
+      setSubmitting(false);
+      return;
+    }
+    // Avatar has no public.profiles column yet — kept in the demo store as
+    // a UI-only convenience so the top bar/Profile page keep showing it,
+    // without inventing a database column for it in this phase.
+    if (avatarUrl) updateDemoProfile({ avatarUrl });
+    router.replace("/today");
   }
 
   function back() {
@@ -149,6 +188,14 @@ export default function OnboardingPage() {
   }
 
   const progressPct = ((stepIndex + 1) / STEPS.length) * 100;
+
+  if (authLoading || profileLoading || !user || profile?.onboardingCompletedAt) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-6 pb-8 pt-6">
@@ -374,16 +421,24 @@ export default function OnboardingPage() {
         )}
       </div>
 
+      {step === "confirm" && submitError && (
+        <p className="mt-4 text-center text-sm text-danger">{submitError}</p>
+      )}
+
       <Button
         size="lg"
         className="mt-8 w-full"
-        disabled={!canAdvance[step]}
+        disabled={!canAdvance[step] || submitting}
         onClick={next}
       >
         {step === "confirm" ? (
-          <>
-            Start using Pace AI <Check className="h-4 w-4" />
-          </>
+          submitting ? (
+            "Saving…"
+          ) : (
+            <>
+              Start using Pace AI <Check className="h-4 w-4" />
+            </>
+          )
         ) : (
           <>
             Continue <ArrowRight className="h-4 w-4" />
