@@ -12,12 +12,31 @@ type Intent =
   | "meal_suggestion"
   | "general";
 
+// Broad, general workout-intent signals — deliberately not tied to any one
+// exact phrasing. Mentioning a workout/training verb, or a creation verb
+// alongside a muscle-group/split name, is a strong enough signal on its own
+// in a fitness app context; the downside of a rare false positive is just
+// showing a workout card, not anything harmful.
+const WORKOUT_VERBS = /\b(workout|work ?out|exercise|train(ing)?|gym session)\b/;
+const CREATION_VERBS = /\b(create|give me|make me|build me|generate|design|suggest|recommend)\b/;
+const MUSCLE_OR_SPLIT =
+  /\b(upper body|lower body|full body|push|pull|legs?|chest|back|shoulders?|biceps?|triceps?|glutes?|core|cardio|arms?)\b/;
+
+// Within the broader workout_today intent, a narrow, explicit set of
+// "show me what I already have" phrasings — deliberately tight (requires an
+// actual retrieval/query structure, not just any sentence mentioning
+// "today's workout") so a generation request like "Plan today's workout" or
+// "Create an upper-body workout" doesn't get misclassified as retrieval.
+const WORKOUT_RETRIEVAL_PHRASES =
+  /\b(what'?s my workout|what is my workout|show me (my |today'?s )?workout|what workout (do i have|is (scheduled|planned|for today))|do i have a workout)\b/;
+
 function detectIntent(text: string): Intent {
   const t = text.toLowerCase();
   if (/(plan (my )?next|3.?day|three.?day)/.test(t)) return "plan_3day";
   if (
     /(today'?s? workout|what should i (do|train)|workout (today|now)|at the gym)/.test(t) ||
-    (t.includes("workout") && (t.includes("today") || t.includes("gym") || t.includes("should")))
+    WORKOUT_VERBS.test(t) ||
+    (CREATION_VERBS.test(t) && MUSCLE_OR_SPLIT.test(t))
   )
     return "workout_today";
   if (/(how am i doing|how did i do|summary|recap)/.test(t)) return "today_summary";
@@ -79,13 +98,19 @@ export async function handleChatMessage(
 
   if (intent === "workout_today") {
     const today = formatISO(new Date(), { representation: "date" });
+    // Only reuse an already-scheduled workout for a "show me what I have"
+    // style request. An explicit generation request ("Create an
+    // upper-body workout", "Give me a leg workout", etc.) always generates
+    // fresh from the real profile, even if one is already scheduled today.
+    const isRetrieval = WORKOUT_RETRIEVAL_PHRASES.test(userMessage.toLowerCase());
     const workout =
-      context.today.workout ??
-      generateWorkout(
-        context.profile,
-        pickSplitForDay(context.profile.frequencyPerWeek ?? 3, context.recentWorkouts.length),
-        today
-      );
+      isRetrieval && context.today.workout
+        ? context.today.workout
+        : generateWorkout(
+            context.profile,
+            pickSplitForDay(context.profile.frequencyPerWeek ?? 3, context.recentWorkouts.length),
+            today
+          );
     const { text } = await provider.generateText({
       system,
       messages: [...history, { role: "user", content: userMessage }],

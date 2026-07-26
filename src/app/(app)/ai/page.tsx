@@ -15,7 +15,23 @@ import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
 import { Camera, Send, TriangleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Workout, Plan, AIContext } from "@/types";
+import type { Workout, Plan, AIContext, Profile } from "@/types";
+
+const WELCOME_MESSAGE_ID = "msg-welcome";
+
+/**
+ * The seeded welcome message (src/lib/demo/seed-data.ts) is deliberately
+ * name-neutral — this renders it personalized using the authenticated
+ * Supabase profile instead. Chat message persistence itself stays on the
+ * demo store; only the displayed text for this one known message is
+ * computed dynamically.
+ */
+function greetingContent(profile: Profile | null): string {
+  const name = profile?.displayName?.trim();
+  const base =
+    "I've got today's breakfast and lunch logged, plus your step count. Want to plan today's workout, or check in on how the day's going?";
+  return name ? `Good to see you, ${name}. ${base}` : `Good to see you. ${base}`;
+}
 
 interface PendingImage {
   base64: string;
@@ -222,18 +238,22 @@ export default function AIPage() {
     <div className="flex h-[calc(100vh-120px)] flex-col">
       <div className="flex-1 overflow-y-auto px-4 pt-5">
         <div className="space-y-5 pb-4">
-          {state.messages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              onConfirmMeal={(items, mealType, mediaUploadId) => {
-                confirmMeal(mealType, items, "image_ai", mediaUploadId);
-              }}
-              onConfirmActivity={(draft) => {
-                confirmActivity(draft, "screenshot_ai");
-              }}
-            />
-          ))}
+          {state.messages.map((m) => {
+            const displayMessage =
+              m.id === WELCOME_MESSAGE_ID ? { ...m, content: greetingContent(profile) } : m;
+            return (
+              <MessageBubble
+                key={m.id}
+                message={displayMessage}
+                onConfirmMeal={(items, mealType, mediaUploadId) => {
+                  confirmMeal(mealType, items, "image_ai", mediaUploadId);
+                }}
+                onConfirmActivity={(draft) => {
+                  confirmActivity(draft, "screenshot_ai");
+                }}
+              />
+            );
+          })}
           <div ref={scrollRef} />
         </div>
       </div>

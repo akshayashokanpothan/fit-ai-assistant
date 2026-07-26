@@ -175,8 +175,12 @@ export const DEMO_MESSAGES: ChatMessage[] = [
     id: "msg-welcome",
     conversationId: "conv-1",
     role: "assistant",
+    // No name here deliberately — the AI page renders this specific
+    // message with a personalized greeting derived from the authenticated
+    // Supabase profile (see WELCOME_MESSAGE_ID in src/app/(app)/ai/page.tsx).
+    // This stays as the safe fallback if that ever isn't available.
     content:
-      "Good to see you, Arjun. I've got today's breakfast and lunch logged, plus your step count. Want to plan today's workout, or check in on how the day's going?",
+      "Good to see you. I've got today's breakfast and lunch logged, plus your step count. Want to plan today's workout, or check in on how the day's going?",
     createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
   },
 ];
