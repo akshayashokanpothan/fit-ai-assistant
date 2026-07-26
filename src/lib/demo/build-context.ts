@@ -5,18 +5,26 @@ import { formatISO } from "date-fns";
 /**
  * Retrieves only the relevant slice of state to send to the AI provider —
  * never the full store. Keeps payloads small and predictable.
+ *
+ * `profile` is passed separately from `state` deliberately: it must come
+ * from the authenticated Supabase profile (see `useProfile()` /
+ * `src/lib/profile/profile-context.tsx`), not the demo store — meals,
+ * activities, workouts, plans, body metrics, and derived memory remain
+ * demo-store-backed until a later phase migrates them too.
  */
-export function buildAIContext(state: {
-  profile: Profile;
-  meals: Meal[];
-  activities: Activity[];
-  workouts: Workout[];
-  plans: Plan[];
-  bodyMetrics: BodyMetric[];
-  derivedMemory: MemoryFact[];
-}): AIContext {
+export function buildAIContext(
+  profile: Profile,
+  state: {
+    meals: Meal[];
+    activities: Activity[];
+    workouts: Workout[];
+    plans: Plan[];
+    bodyMetrics: BodyMetric[];
+    derivedMemory: MemoryFact[];
+  }
+): AIContext {
   const today = formatISO(new Date(), { representation: "date" });
-  const goalTargets = estimateDailyTargets(state.profile);
+  const goalTargets = estimateDailyTargets(profile);
 
   const todaysMeals = state.meals.filter(
     (m) => m.eventTime.slice(0, 10) === today && m.confirmationState === "confirmed"
@@ -47,7 +55,7 @@ export function buildAIContext(state: {
   const currentPlan = state.plans.find((p) => p.status === "active") ?? null;
 
   return {
-    profile: state.profile,
+    profile,
     goalTargets,
     today: {
       meals: todaysMeals,

@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
+import { useProfile } from "@/lib/profile/profile-context";
+import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import { getExerciseById } from "@/lib/demo/seed-exercises";
 export default function TodayPage() {
   const router = useRouter();
   const { state, todaySummary } = useDemoStore();
+  const { profile, loading: profileLoading } = useProfile();
   const today = formatISO(new Date(), { representation: "date" });
   const summary = todaySummary();
 
@@ -54,8 +57,27 @@ export default function TodayPage() {
     })),
   ].sort((a, b) => a.time.localeCompare(b.time));
 
-  const proteinPct = summary.targetProteinG
-    ? Math.min(100, Math.round((summary.proteinG / summary.targetProteinG) * 100))
+  // Never silently fall back to the seeded demo profile for an
+  // authenticated user — wait for the real profile to load. In practice
+  // the parent (app) layout already gates this page behind a loaded,
+  // onboarded profile, so this is a defensive fallback rather than the
+  // expected path.
+  if (profileLoading || !profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
+      </div>
+    );
+  }
+
+  // Consumed-so-far totals (kcal/protein/carbs/fat) come from today's
+  // logged meals — still demo-store-backed, out of Phase 3's scope. Only
+  // the target itself is recomputed from the real, authenticated profile
+  // (same existing formula, src/lib/nutrition/targets.ts — data source
+  // changed, not the calculation).
+  const targets = estimateDailyTargets(profile);
+  const proteinPct = targets.proteinG
+    ? Math.min(100, Math.round((summary.proteinG / targets.proteinG) * 100))
     : 0;
 
   return (
@@ -71,12 +93,12 @@ export default function TodayPage() {
           <span className="tabular font-display text-3xl font-medium text-ink">
             {summary.kcal.toLocaleString()}
           </span>
-          <span className="text-sm text-muted">of ~{summary.targetKcal.toLocaleString()} kcal</span>
+          <span className="text-sm text-muted">of ~{targets.kcal.toLocaleString()} kcal</span>
         </div>
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-ink-soft">Protein</span>
           <span className="tabular text-ink-soft">
-            {summary.proteinG} / {summary.targetProteinG}g
+            {summary.proteinG} / {targets.proteinG}g
           </span>
         </div>
         <Progress value={proteinPct} className="mt-2" />

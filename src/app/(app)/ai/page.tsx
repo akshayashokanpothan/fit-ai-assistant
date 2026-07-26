@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDemoStore } from "@/lib/demo/store";
+import { useProfile } from "@/lib/profile/profile-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ interface PendingImage {
 export default function AIPage() {
   const { state, addMessage, updateMessage, confirmMeal, confirmActivity, recordUsage } =
     useDemoStore();
+  const { profile } = useProfile();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,6 +45,22 @@ export default function AIPage() {
   async function sendText(text: string) {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
+
+    if (!profile) {
+      // Defensive only — the parent (app) layout already gates this page
+      // behind a loaded, onboarded profile. Never silently fall back to
+      // the seeded demo profile for an authenticated user.
+      pushMessage({
+        id: `msg-${Date.now()}-profile-error`,
+        conversationId: state.conversation.id,
+        role: "assistant",
+        content: "I couldn't load your profile just now. Please refresh and try again.",
+        createdAt: new Date().toISOString(),
+        status: "sent",
+      });
+      return;
+    }
+
     setInput("");
 
     const userMsg: ChatMessage = {
@@ -69,7 +87,7 @@ export default function AIPage() {
     recordUsage("ai_message");
 
     try {
-      const context: AIContext = buildAIContext(state);
+      const context: AIContext = buildAIContext(profile, state);
       const history = state.messages
         .filter((m) => m.status !== "sending")
         .slice(-10)
