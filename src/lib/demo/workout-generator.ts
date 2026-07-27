@@ -8,6 +8,7 @@ import type {
   WorkoutExercise,
 } from "@/types";
 import { EXERCISE_LIBRARY } from "./seed-exercises";
+import type { ResolvedWorkoutFocus } from "./workout-focus";
 
 const HOME_EQUIPMENT: Equipment[] = ["bodyweight", "resistance_band", "dumbbell"];
 const GYM_EQUIPMENT: Equipment[] = [
@@ -68,9 +69,17 @@ function repRangeForMuscle(muscle: MuscleGroup): [number, number] {
   return [10, 15];
 }
 
+function targetMusclesForFocus(focus: ResolvedWorkoutFocus): MuscleGroup[] {
+  return focus.kind === "split" ? SPLIT_MUSCLES[focus.split] : focus.muscles;
+}
+
+function titleForFocus(focus: ResolvedWorkoutFocus): string {
+  return focus.kind === "split" ? focus.split : focus.label;
+}
+
 export function generateWorkout(
   profile: Profile,
-  split: SplitLabel,
+  focus: ResolvedWorkoutFocus,
   scheduledFor: string,
   excludeExerciseIds: string[] = []
 ): Workout {
@@ -81,7 +90,8 @@ export function generateWorkout(
       ? GYM_EQUIPMENT
       : [...new Set([...HOME_EQUIPMENT, ...GYM_EQUIPMENT])];
 
-  const targetMuscles = SPLIT_MUSCLES[split];
+  const targetMuscles = targetMusclesForFocus(focus);
+  const title = titleForFocus(focus);
   const experience = profile.experience ?? "beginner";
 
   let pool: Exercise[] = EXERCISE_LIBRARY.filter(
@@ -143,9 +153,9 @@ export function generateWorkout(
   );
 
   return {
-    id: `workout-${scheduledFor}-${split.replace(/\s/g, "").toLowerCase()}`,
+    id: `workout-${scheduledFor}-${title.replace(/[\s&]/g, "").toLowerCase()}`,
     userId: profile.userId,
-    title: split,
+    title,
     estimatedMinutes,
     status: "planned",
     scheduledFor,

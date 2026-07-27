@@ -104,7 +104,7 @@ export const DEMO_TODAY_ACTIVITY: Activity[] = [
 
 export const DEMO_TODAY_WORKOUT = generateWorkout(
   DEMO_PROFILE,
-  "Upper Body",
+  { kind: "split", split: "Upper Body" },
   formatISO(new Date(), { representation: "date" })
 );
 
@@ -148,7 +148,11 @@ export const DEMO_HISTORY_ACTIVITY: Activity[] = [
 ];
 
 export const DEMO_HISTORY_WORKOUT = {
-  ...generateWorkout(DEMO_PROFILE, "Lower Body", formatISO(subDays(new Date(), 1), { representation: "date" })),
+  ...generateWorkout(
+    DEMO_PROFILE,
+    { kind: "split", split: "Lower Body" },
+    formatISO(subDays(new Date(), 1), { representation: "date" })
+  ),
   status: "completed" as const,
   startedAt: new Date(Date.now() - 25 * 3600 * 1000).toISOString(),
   completedAt: new Date(Date.now() - 24.2 * 3600 * 1000).toISOString(),

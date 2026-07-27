@@ -2,6 +2,7 @@ import type { AIContext, StructuredCard } from "@/types";
 import { getAIProvider } from "@/lib/ai";
 import { checkSafety } from "./safety";
 import { generateWorkout, pickSplitForDay } from "@/lib/demo/workout-generator";
+import { extractRequestedFocus } from "@/lib/demo/workout-focus";
 import { generateThreeDayPlan } from "@/lib/demo/plan-generator";
 import { formatISO } from "date-fns";
 
@@ -103,12 +104,24 @@ export async function handleChatMessage(
     // upper-body workout", "Give me a leg workout", etc.) always generates
     // fresh from the real profile, even if one is already scheduled today.
     const isRetrieval = WORKOUT_RETRIEVAL_PHRASES.test(userMessage.toLowerCase());
+    const requestedFocus = extractRequestedFocus(userMessage);
     const workout =
       isRetrieval && context.today.workout
         ? context.today.workout
         : generateWorkout(
             context.profile,
-            pickSplitForDay(context.profile.frequencyPerWeek ?? 3, context.recentWorkouts.length),
+            // Explicit user request beats automatic rotation; only fall
+            // back to pickSplitForDay's frequency/history-based rotation
+            // when the user didn't ask for anything specific.
+            requestedFocus.kind === "none"
+              ? {
+                  kind: "split",
+                  split: pickSplitForDay(
+                    context.profile.frequencyPerWeek ?? 3,
+                    context.recentWorkouts.length
+                  ),
+                }
+              : requestedFocus,
             today
           );
     const { text } = await provider.generateText({
