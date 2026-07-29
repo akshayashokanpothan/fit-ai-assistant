@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDemoStore } from "@/lib/demo/store";
+import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useProfile } from "@/lib/profile/profile-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
@@ -43,6 +44,7 @@ interface PendingImage {
 export default function AIPage() {
   const { state, addMessage, updateMessage, confirmMeal, confirmActivity, recordUsage } =
     useDemoStore();
+  const { workouts } = useWorkouts();
   const { profile } = useProfile();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
@@ -103,7 +105,7 @@ export default function AIPage() {
     recordUsage("ai_message");
 
     try {
-      const context: AIContext = buildAIContext(profile, state);
+      const context: AIContext = buildAIContext(profile, state, workouts);
       const history = state.messages
         .filter((m) => m.status !== "sending")
         .slice(-10)

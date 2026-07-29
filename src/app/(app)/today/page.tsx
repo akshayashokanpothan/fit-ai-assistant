@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
+import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useProfile } from "@/lib/profile/profile-context";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { getExerciseById } from "@/lib/demo/seed-exercises";
 export default function TodayPage() {
   const router = useRouter();
   const { state, todaySummary } = useDemoStore();
+  const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
   const { profile, loading: profileLoading } = useProfile();
   const today = formatISO(new Date(), { representation: "date" });
   const summary = todaySummary();
@@ -27,7 +29,7 @@ export default function TodayPage() {
     [state.meals, today]
   );
   const todaysActivity = state.activities.filter((a) => a.eventDate === today);
-  const todaysWorkout = state.workouts.find((w) => w.scheduledFor === today);
+  const todaysWorkout = workouts.find((w) => w.scheduledFor === today);
 
   type ThreadItem = {
     time: string;
@@ -62,7 +64,7 @@ export default function TodayPage() {
   // the parent (app) layout already gates this page behind a loaded,
   // onboarded profile, so this is a defensive fallback rather than the
   // expected path.
-  if (profileLoading || !profile) {
+  if (profileLoading || workoutsLoading || !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
@@ -130,6 +132,11 @@ export default function TodayPage() {
       {/* Workout */}
       <div className="mt-8">
         <h2 className="mb-3 text-sm font-medium text-ink-soft">Workout</h2>
+        {workoutsError && (
+           <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+             Failed to load workouts: {workoutsError}
+           </div>
+        )}
         {todaysWorkout ? (
           <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-5">
             <div className="flex items-start justify-between">

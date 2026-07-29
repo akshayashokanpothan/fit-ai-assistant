@@ -1,15 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Workout } from "@/types";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Button } from "@/components/ui/button";
-import { useDemoStore } from "@/lib/demo/store";
+import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { Dumbbell } from "lucide-react";
 
 export function WorkoutPreviewCard({ workout }: { workout: Workout }) {
   const router = useRouter();
-  const { upsertWorkout } = useDemoStore();
+  const { createWorkout } = useWorkouts();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleAction(action: "start" | "save") {
+    setLoading(true);
+    setError(null);
+    const { error: err, workout: created } = await createWorkout(workout);
+    setLoading(false);
+    
+    if (err || !created) {
+      setError(err ?? "Failed to save workout");
+      return;
+    }
+
+    if (action === "start") {
+      router.push(`/workout/${created.id}`);
+    } else {
+      router.push("/today");
+    }
+  }
 
   return (
     <div className="mt-2 w-full max-w-sm rounded-[var(--radius-lg)] border border-line bg-surface p-4">
@@ -18,6 +39,12 @@ export function WorkoutPreviewCard({ workout }: { workout: Workout }) {
         <span className="font-display text-lg font-medium text-ink">{workout.title}</span>
       </div>
       <p className="mt-0.5 text-sm text-muted">~{workout.estimatedMinutes} minutes</p>
+
+      {error && (
+        <p className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-200">
+          {error}
+        </p>
+      )}
 
       <ul className="mt-3 space-y-1.5">
         {workout.exercises.map((we) => {
@@ -37,20 +64,16 @@ export function WorkoutPreviewCard({ workout }: { workout: Workout }) {
       <div className="mt-4 flex gap-2">
         <Button
           className="flex-1"
-          onClick={() => {
-            upsertWorkout(workout);
-            router.push(`/workout/${workout.id}`);
-          }}
+          disabled={loading}
+          onClick={() => handleAction("start")}
         >
-          Start workout
+          {loading ? "Saving..." : "Start workout"}
         </Button>
         <Button
           variant="outline"
           className="flex-1"
-          onClick={() => {
-            upsertWorkout(workout);
-            router.push("/today");
-          }}
+          disabled={loading}
+          onClick={() => handleAction("save")}
         >
           Save for later
         </Button>

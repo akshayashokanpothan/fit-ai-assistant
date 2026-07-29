@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
+import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -21,9 +21,10 @@ const DIFFICULTIES: { value: NonNullable<Workout["perceivedDifficulty"]>; label:
 export default function ActiveWorkoutPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { state, startWorkout, logSet, markExerciseSkipped, completeWorkout } = useDemoStore();
+  const { workouts, startWorkout, logSet, markExerciseSkipped, completeWorkout, error: contextError } = useWorkouts();
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const workout = state.workouts.find((w) => w.id === params.id);
+  const workout = workouts.find((w) => w.id === params.id);
 
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [difficulty, setDifficulty] = useState<NonNullable<Workout["perceivedDifficulty"]> | null>(null);
@@ -33,14 +34,14 @@ export default function ActiveWorkoutPage() {
 
   const previousWorkout = useMemo(() => {
     if (!workout) return null;
-    return [...state.workouts]
+    return [...workouts]
       .filter((w) => w.id !== workout.id && w.status === "completed" && w.title === workout.title)
       .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))[0];
-  }, [state.workouts, workout]);
+  }, [workouts, workout]);
 
   useEffect(() => {
     if (workout && workout.status !== "in_progress" && workout.status !== "completed") {
-      startWorkout(workout.id);
+      startWorkout(workout.id).catch((err) => setLocalError(err.message));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workout?.id, workout?.status]);
@@ -74,16 +75,21 @@ export default function ActiveWorkoutPage() {
   });
   const prevLastSet = prevExerciseLog?.sets.filter((s) => s.completed).slice(-1)[0];
 
-  function completeSet() {
+  async function completeSet() {
     if (!currentSet) return;
-    logSet(workout!.id, currentWE.id, currentSet.setNumber, {
-      weightKg: weightInput ? Number(weightInput) : null,
-      reps: repsInput ? Number(repsInput) : currentSet.targetRepsLow,
-      completed: true,
-      skipped: false,
-    });
-    setWeightInput("");
-    setRepsInput("");
+    try {
+      setLocalError(null);
+      await logSet(workout!.id, currentWE.id, currentSet.setNumber, {
+        weightKg: weightInput ? Number(weightInput) : null,
+        reps: repsInput ? Number(repsInput) : currentSet.targetRepsLow,
+        completed: true,
+        skipped: false,
+      });
+      setWeightInput("");
+      setRepsInput("");
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Failed to log set");
+    }
   }
 
   function goNextExercise() {
@@ -92,9 +98,14 @@ export default function ActiveWorkoutPage() {
     }
   }
 
-  function skipExercise() {
-    markExerciseSkipped(workout!.id, currentWE.id);
-    goNextExercise();
+  async function skipExercise() {
+    try {
+      setLocalError(null);
+      await markExerciseSkipped(workout!.id, currentWE.id);
+      goNextExercise();
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Failed to skip exercise");
+    }
   }
 
   const overallProgress = Math.round(((exerciseIndex + (isExerciseDone ? 1 : 0)) / totalExercises) * 100);
@@ -114,6 +125,11 @@ export default function ActiveWorkoutPage() {
           {exerciseIndex + 1}/{totalExercises}
         </span>
       </div>
+      {(localError || contextError) && (
+        <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          {localError || contextError}
+        </div>
+      )}
       <Progress value={overallProgress} className="mt-3" />
 
       <div className="mt-6 flex-1">
@@ -215,9 +231,14 @@ export default function ActiveWorkoutPage() {
             setDifficulty={setDifficulty}
             note={note}
             setNote={setNote}
-            onFinish={() => {
+            onFinish={async () => {
               if (!difficulty) return;
-              completeWorkout(workout!.id, difficulty, note.trim() || undefined);
+              try {
+                setLocalError(null);
+                await completeWorkout(workout!.id, difficulty, note.trim() || undefined);
+              } catch (err) {
+                setLocalError(err instanceof Error ? err.message : "Failed to complete workout");
+              }
             }}
           />
         )}

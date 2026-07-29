@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
+import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface HistoryEntry {
 export default function HistoryPage() {
   const router = useRouter();
   const { state } = useDemoStore();
+  const { workouts, error: workoutsError } = useWorkouts();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 
   const entries = useMemo<HistoryEntry[]>(() => {
@@ -43,7 +45,7 @@ export default function HistoryPage() {
     }
 
     if (filter === "all" || filter === "workouts") {
-      for (const w of state.workouts) {
+      for (const w of workouts) {
         if (w.status !== "completed") continue;
         items.push({
           date: w.completedAt ?? w.scheduledFor,
@@ -92,7 +94,7 @@ export default function HistoryPage() {
     }
 
     return items.sort((a, b) => b.date.localeCompare(a.date));
-  }, [state, filter]);
+  }, [state, filter, workouts]);
 
   const grouped: Record<Group, HistoryEntry[]> = {
     Today: entries.filter((e) => e.group === "Today"),
@@ -103,6 +105,12 @@ export default function HistoryPage() {
   return (
     <div className="px-5 pt-6">
       <h1 className="font-display text-[26px] font-medium text-ink">History</h1>
+
+      {workoutsError && (
+        <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          Failed to load workouts: {workoutsError}
+        </div>
+      )}
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(["all", "meals", "workouts", "activity"] as const).map((f) => (

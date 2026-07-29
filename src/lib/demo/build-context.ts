@@ -17,11 +17,11 @@ export function buildAIContext(
   state: {
     meals: Meal[];
     activities: Activity[];
-    workouts: Workout[];
     plans: Plan[];
     bodyMetrics: BodyMetric[];
     derivedMemory: MemoryFact[];
-  }
+  },
+  workouts: Workout[]
 ): AIContext {
   const today = formatISO(new Date(), { representation: "date" });
   const goalTargets = estimateDailyTargets(profile);
@@ -30,7 +30,7 @@ export function buildAIContext(
     (m) => m.eventTime.slice(0, 10) === today && m.confirmationState === "confirmed"
   );
   const todaysActivities = state.activities.filter((a) => a.eventDate === today);
-  const todaysWorkout = state.workouts.find((w) => w.scheduledFor === today) ?? null;
+  const todaysWorkout = workouts.find((w) => w.scheduledFor === today) ?? null;
 
   const nutritionTotals = todaysMeals.reduce(
     (acc, m) => ({
@@ -42,7 +42,7 @@ export function buildAIContext(
     { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }
   );
 
-  const recentWorkouts = [...state.workouts]
+  const recentWorkouts = [...workouts]
     .filter((w) => w.status === "completed")
     .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
     .slice(0, 5);
