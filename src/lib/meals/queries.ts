@@ -96,6 +96,13 @@ export async function confirmMeal(
       ? items.reduce((a, i) => a + i.confidence, 0) / items.length
       : 1.0;
 
+  // Guard: only persist a mediaUploadId that is a genuine UUID.
+  // Temporary client-side placeholders (e.g. "media-1785350196807") must not
+  // be written to the UUID column — they become null until a real upload UUID
+  // is available (future cloud storage phase).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const safeMediaId = mediaUploadId && UUID_RE.test(mediaUploadId) ? mediaUploadId : null;
+
   const { data: mealRow, error: mealError } = await supabase
     .from("meals")
     .insert({
@@ -105,7 +112,7 @@ export async function confirmMeal(
       source,
       confidence,
       confirmation_state: "confirmed",
-      media_upload_id: mediaUploadId ?? null,
+      media_upload_id: safeMediaId,
     })
     .select("*")
     .single();
