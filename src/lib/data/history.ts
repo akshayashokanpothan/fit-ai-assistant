@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDemoStore } from "@/lib/demo/store";
 import { createClient } from "@/utils/supabase/client";
+import { DEMO_MESSAGES } from "@/lib/demo/seed-data";
 import type { ChatMessage, Conversation } from "@/types";
 
 /**
@@ -19,7 +20,14 @@ export function useHistoryDAL() {
   const [dbConversation, setDbConversation] = useState<Conversation | null>(null);
 
   // For Phase 7, we proxy the demo store if not logged in, or wire to Supabase.
-  const messages = user ? dbMessages : demoStore.state.messages;
+  const messages = useMemo(() => {
+    if (!user) return demoStore.state.messages;
+    if (dbMessages.length === 0 || dbMessages[0].id !== "msg-welcome") {
+      return [DEMO_MESSAGES[0], ...dbMessages];
+    }
+    return dbMessages;
+  }, [user, dbMessages, demoStore.state.messages]);
+
   const conversation = user ? dbConversation : demoStore.state.conversation;
 
   useEffect(() => {
@@ -104,14 +112,32 @@ export function useHistoryDAL() {
         // Optimistic UI update
         setDbMessages((prev) => [...prev, message]);
 
-        // If this is the first message and we have no conversation, we might need to create one.
-        // For now, assuming `message.conversationId` is correct or default.
-        // The backend logic handles creating if it doesn't exist.
-        
         try {
+          let validConversationId = message.conversationId;
+
+          if (!validConversationId || validConversationId === "default") {
+            const { data: newConv, error: convError } = await supabase
+              .from("conversations")
+              .insert({ user_id: user.id })
+              .select()
+              .single();
+
+            if (convError) throw convError;
+
+            validConversationId = newConv.id;
+            
+            setDbConversation({
+              id: newConv.id,
+              userId: newConv.user_id,
+              title: newConv.title,
+              createdAt: newConv.created_at,
+              updatedAt: newConv.updated_at,
+            });
+          }
+
           const { error } = await supabase.from("messages").insert({
             id: message.id,
-            conversation_id: message.conversationId,
+            conversation_id: validConversationId,
             user_id: user.id,
             role: message.role,
             content: message.content,

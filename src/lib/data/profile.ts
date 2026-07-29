@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDemoStore } from "@/lib/demo/store";
-import { createClient } from "@/utils/supabase/client";
 import { useProfile as useSupabaseProfile } from "@/lib/profile/profile-context";
 import type { Profile } from "@/types";
 
