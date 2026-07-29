@@ -9,44 +9,27 @@ import React, {
   useState,
 } from "react";
 import type {
-  Activity,
   BodyMetric,
   ChatMessage,
-  ConfirmationState,
   Conversation,
-  MealItem,
-  MealType,
   MemoryFact,
   Profile,
   UsageEventType,
-  Workout,
-  WorkoutSetLog,
 } from "@/types";
 import {
   DEMO_BODY_METRICS,
   DEMO_CONVERSATION,
-  DEMO_HISTORY_ACTIVITY,
-  DEMO_HISTORY_MEALS,
-  DEMO_HISTORY_WORKOUT,
   DEMO_MESSAGES,
   DEMO_PROFILE,
-  DEMO_TODAY_ACTIVITY,
-  DEMO_TODAY_MEALS,
-  DEMO_TODAY_WORKOUT,
   DEMO_USER_ID,
 } from "./seed-data";
-import { sumNutrition } from "@/lib/nutrition/seed-foods";
-import { estimateDailyTargets } from "@/lib/nutrition/targets";
-import { formatISO } from "date-fns";
+
 
 const STORAGE_KEY = "pace_demo_state_v1";
 
 interface DemoState {
   onboardingComplete: boolean;
   profile: Profile;
-  meals: import("@/types").Meal[];
-  activities: Activity[];
-  workouts: Workout[];
   bodyMetrics: BodyMetric[];
   conversation: Conversation;
   messages: ChatMessage[];
@@ -58,9 +41,6 @@ function seedState(onboarded: boolean): DemoState {
   return {
     onboardingComplete: onboarded,
     profile: DEMO_PROFILE,
-    meals: [...DEMO_TODAY_MEALS, ...DEMO_HISTORY_MEALS],
-    activities: [...DEMO_TODAY_ACTIVITY, ...DEMO_HISTORY_ACTIVITY],
-    workouts: [DEMO_TODAY_WORKOUT, DEMO_HISTORY_WORKOUT],
     bodyMetrics: DEMO_BODY_METRICS,
     conversation: DEMO_CONVERSATION,
     messages: DEMO_MESSAGES,
@@ -94,10 +74,6 @@ function seedState(onboarded: boolean): DemoState {
   };
 }
 
-function todayISO() {
-  return formatISO(new Date(), { representation: "date" });
-}
-
 interface DemoStoreValue {
   state: DemoState;
   hydrated: boolean;
@@ -105,37 +81,8 @@ interface DemoStoreValue {
   updateProfile: (patch: Partial<Profile>) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
-  confirmMeal: (
-    mealType: MealType,
-    items: MealItem[],
-    source: "image_ai" | "manual" | "screenshot_ai",
-    mediaUploadId?: string
-  ) => void;
-  upsertWorkout: (workout: Workout) => void;
-  startWorkout: (workoutId: string) => void;
-  logSet: (
-    workoutId: string,
-    workoutExerciseId: string,
-    setNumber: number,
-    patch: Partial<WorkoutSetLog["sets"][number]>
-  ) => void;
-  markExerciseSkipped: (workoutId: string, workoutExerciseId: string) => void;
-  completeWorkout: (
-    workoutId: string,
-    perceivedDifficulty: NonNullable<Workout["perceivedDifficulty"]>,
-    note?: string
-  ) => void;
   addBodyMetric: (weightKg: number) => void;
   recordUsage: (type: UsageEventType) => void;
-  todaySummary: () => {
-    date: string;
-    kcal: number;
-    proteinG: number;
-    carbsG: number;
-    fatG: number;
-    targetKcal: number;
-    targetProteinG: number;
-  };
   resetDemo: () => void;
 }
 
@@ -155,8 +102,13 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
+        const parsed = JSON.parse(raw);
+        delete parsed.workouts;
+        delete parsed.meals;
+        delete parsed.activities;
+        delete parsed.plans;
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setState(JSON.parse(raw));
+        setState({ ...seedState(false), ...parsed });
       }
     } catch {
       // ignore corrupt storage, keep defaults
@@ -205,132 +157,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const confirmMeal = useCallback(
-    (
-      mealType: MealType,
-      items: MealItem[],
-      source: "image_ai" | "manual" | "screenshot_ai",
-      mediaUploadId?: string
-    ) => {
-      const totalNutrition = sumNutrition(items.map((i) => i.nutrition));
-      const meal = {
-        id: `meal-${Date.now()}`,
-        userId: DEMO_USER_ID,
-        mealType,
-        eventTime: new Date().toISOString(),
-        items,
-        totalNutrition,
-        source,
-        confidence: items.reduce((a, i) => a + i.confidence, 0) / Math.max(items.length, 1),
-        confirmationState: "confirmed" as ConfirmationState,
-        mediaUploadId: mediaUploadId ?? null,
-        createdAt: new Date().toISOString(),
-      };
-      setState((s) => ({ ...s, meals: [meal, ...s.meals] }));
-    },
-    []
-  );
 
-  const upsertWorkout = useCallback((workout: Workout) => {
-    setState((s) => {
-      const exists = s.workouts.some((w) => w.id === workout.id);
-      return {
-        ...s,
-        workouts: exists
-          ? s.workouts.map((w) => (w.id === workout.id ? workout : w))
-          : [workout, ...s.workouts],
-      };
-    });
-  }, []);
-
-  const startWorkout = useCallback((workoutId: string) => {
-    setState((s) => ({
-      ...s,
-      workouts: s.workouts.map((w) =>
-        w.id === workoutId
-          ? { ...w, status: "in_progress", startedAt: w.startedAt ?? new Date().toISOString() }
-          : w
-      ),
-    }));
-  }, []);
-
-  const logSet = useCallback(
-    (
-      workoutId: string,
-      workoutExerciseId: string,
-      setNumber: number,
-      patch: Partial<WorkoutSetLog["sets"][number]>
-    ) => {
-      setState((s) => ({
-        ...s,
-        workouts: s.workouts.map((w) => {
-          if (w.id !== workoutId) return w;
-          const logs = [...w.logs];
-          let log = logs.find((l) => l.workoutExerciseId === workoutExerciseId);
-          const we = w.exercises.find((e) => e.id === workoutExerciseId);
-          if (!log) {
-            log = {
-              workoutExerciseId,
-              sets: (we?.plannedSets ?? []).map((ps) => ({
-                setNumber: ps.setNumber,
-                weightKg: null,
-                reps: null,
-                completed: false,
-                skipped: false,
-              })),
-            };
-            logs.push(log);
-          }
-          log.sets = log.sets.map((st) =>
-            st.setNumber === setNumber ? { ...st, ...patch } : st
-          );
-          return { ...w, logs };
-        }),
-      }));
-    },
-    []
-  );
-
-  const markExerciseSkipped = useCallback((workoutId: string, workoutExerciseId: string) => {
-    setState((s) => ({
-      ...s,
-      workouts: s.workouts.map((w) => {
-        if (w.id !== workoutId) return w;
-        const logs = [...w.logs];
-        let log = logs.find((l) => l.workoutExerciseId === workoutExerciseId);
-        if (!log) {
-          log = { workoutExerciseId, sets: [] };
-          logs.push(log);
-        }
-        log.skippedExercise = true;
-        return { ...w, logs };
-      }),
-    }));
-  }, []);
-
-  const completeWorkout = useCallback(
-    (
-      workoutId: string,
-      perceivedDifficulty: NonNullable<Workout["perceivedDifficulty"]>,
-      note?: string
-    ) => {
-      setState((s) => ({
-        ...s,
-        workouts: s.workouts.map((w) =>
-          w.id === workoutId
-            ? {
-                ...w,
-                status: "completed",
-                completedAt: new Date().toISOString(),
-                perceivedDifficulty,
-                note,
-              }
-            : w
-        ),
-      }));
-    },
-    []
-  );
 
   const addBodyMetric = useCallback((weightKg: number) => {
     setState((s) => ({
@@ -350,24 +177,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const todaySummary = useCallback(() => {
-    const today = todayISO();
-    const todaysMeals = state.meals.filter(
-      (m) => m.eventTime.slice(0, 10) === today && m.confirmationState === "confirmed"
-    );
-    const totals = sumNutrition(todaysMeals.map((m) => m.totalNutrition));
-    const targets = estimateDailyTargets(state.profile);
-    return {
-      date: today,
-      kcal: Math.round(totals.kcal),
-      proteinG: Math.round(totals.proteinG),
-      carbsG: Math.round(totals.carbsG),
-      fatG: Math.round(totals.fatG),
-      targetKcal: targets.kcal,
-      targetProteinG: targets.proteinG,
-    };
-  }, [state.meals, state.profile]);
-
   const resetDemo = useCallback(() => {
     const fresh = seedState(false);
     setState(fresh);
@@ -386,15 +195,8 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       updateProfile,
       addMessage,
       updateMessage,
-      confirmMeal,
-      upsertWorkout,
-      startWorkout,
-      logSet,
-      markExerciseSkipped,
-      completeWorkout,
       addBodyMetric,
       recordUsage,
-      todaySummary,
       resetDemo,
     }),
     [
@@ -404,15 +206,8 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       updateProfile,
       addMessage,
       updateMessage,
-      confirmMeal,
-      upsertWorkout,
-      startWorkout,
-      logSet,
-      markExerciseSkipped,
-      completeWorkout,
       addBodyMetric,
       recordUsage,
-      todaySummary,
       resetDemo,
     ]
   );

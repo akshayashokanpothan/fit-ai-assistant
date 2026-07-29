@@ -260,9 +260,10 @@ function FinishWorkoutButton({
   setDifficulty: (d: NonNullable<Workout["perceivedDifficulty"]>) => void;
   note: string;
   setNote: (n: string) => void;
-  onFinish: () => void;
+  onFinish: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!open) {
     return (
@@ -298,8 +299,19 @@ function FinishWorkoutButton({
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
-        <Button className="mt-5 w-full" disabled={!difficulty} onClick={onFinish}>
-          Save workout
+        <Button
+          className="mt-5 w-full"
+          disabled={!difficulty || saving}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await onFinish();
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? "Finishing..." : "Save workout"}
         </Button>
       </div>
     </div>
