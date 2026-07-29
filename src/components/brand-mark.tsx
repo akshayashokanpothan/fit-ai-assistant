@@ -1,27 +1,29 @@
 import { cn } from "@/lib/utils";
 
-/**
- * Minimal geometric mark: three rounded strides of increasing height on a
- * rising baseline — reads as building pace / forward momentum without
- * leaning on generic fitness or AI iconography (no dumbbell, heart, brain,
- * sparkle, or bolt). Kept as flat shapes on the existing token colors so it
- * stays legible down to ~24px and can be reused for favicon/PWA icons later.
- */
 export function PaceMark({ size = 28, className }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 28 28"
+      viewBox="0 0 512 512"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0", className)}
       role="img"
       aria-label="Pace AI"
     >
-      <rect x="4" y="16" width="4.2" height="8" rx="2.1" fill="var(--primary)" />
-      <rect x="11.4" y="10.5" width="4.2" height="13.5" rx="2.1" fill="var(--primary)" />
-      <rect x="18.8" y="4" width="4.2" height="20" rx="2.1" fill="var(--accent)" />
+      <circle cx="155" cy="105" r="42" fill="#2F6F4E" />
+      <circle cx="350" cy="105" r="42" fill="#F58634" />
+      <path d="M113 405 C103 331 109 251 127 213 C145 175 181 163 218 170 C245 175 267 187 286 202
+               C300 214 301 235 288 248 C277 259 260 260 246 251
+               C228 240 210 233 193 235 C177 237 168 247 163 262
+               C153 292 154 349 160 396 C163 420 148 438 126 439
+               C105 440 91 426 88 406 Z" fill="#2F6F4E" />
+      <path d="M315 170 C348 163 383 176 403 205 C426 238 431 286 414 326
+               C393 374 350 405 293 414 C269 418 248 403 245 382
+               C242 361 257 344 279 340 C314 334 338 318 349 293
+               C358 272 356 248 346 233 C337 220 324 213 309 211
+               C291 209 280 195 283 181 C286 171 298 166 315 170 Z" fill="#F58634" />
     </svg>
   );
 }
