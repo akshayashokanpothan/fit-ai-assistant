@@ -49,7 +49,7 @@ interface PendingImage {
 
 export default function AIPage() {
   const { recordUsage, state: demoState } = useDemoStore();
-  const { messages, conversation, addMessage, updateMessage } = useHistoryDAL();
+  const { messages, conversation, addMessage, updateMessage, historyLoading } = useHistoryDAL();
   const { workouts } = useWorkoutsDAL();
   const { meals, confirmMeal } = useMealsDAL();
   const { activities, confirmActivity } = useActivitiesDAL();
@@ -289,6 +289,20 @@ export default function AIPage() {
               />
             );
           })}
+
+          {/* History hydration loading state — shown only while the initial
+              Supabase fetch is in-flight after a refresh. Fades once resolved. */}
+          {historyLoading && (
+            <div className="flex items-center gap-2.5 pl-1 text-sm text-ink-soft">
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft [animation-delay:300ms]" />
+              </span>
+              <span>Retrieving your conversation...</span>
+            </div>
+          )}
+
           <div ref={scrollRef} />
         </div>
       </div>

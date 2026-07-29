@@ -18,6 +18,9 @@ export function useHistoryDAL() {
 
   const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
   const [dbConversation, setDbConversation] = useState<Conversation | null>(null);
+  // True only while the initial Supabase history fetch is in-flight for an
+  // authenticated user. Starts false for unauthenticated/demo paths.
+  const [historyLoading, setHistoryLoading] = useState(() => !!user);
 
   const idMapRef = useRef<Record<string, string>>({});
   const pendingConvRef = useRef<Promise<string> | null>(null);
@@ -40,8 +43,10 @@ export function useHistoryDAL() {
       setDbMessages([]);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDbConversation(null);
+      setHistoryLoading(false);
       return;
     }
+    setHistoryLoading(true);
 
     let isMounted = true;
 
@@ -100,6 +105,8 @@ export function useHistoryDAL() {
         }
       } catch (err) {
         console.error("History fetch error:", err);
+      } finally {
+        if (isMounted) setHistoryLoading(false);
       }
     };
 
@@ -226,5 +233,6 @@ export function useHistoryDAL() {
     conversation,
     addMessage,
     updateMessage,
+    historyLoading,
   };
 }
