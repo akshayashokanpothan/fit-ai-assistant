@@ -102,8 +102,8 @@ export function WeightProgressChart({ metrics }: WeightProgressChartProps) {
           {/* Today highlight column */}
           <div className="absolute right-0 top-0 bottom-0 w-[14.28%] bg-primary-soft/50 rounded-[12px] -z-10 pointer-events-none" />
           
+          {/* SVG for the line only, allowing non-proportional scaling */}
           <svg className="w-full overflow-visible" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none">
-             {/* Line */}
              {pathD && (
                <path
                  d={pathD}
@@ -115,60 +115,72 @@ export function WeightProgressChart({ metrics }: WeightProgressChartProps) {
                  vectorEffect="non-scaling-stroke"
                />
              )}
-             
-             {/* Data points */}
-             {data.map((point, i) => {
-               if (point.weight === null) return null;
-               const x = getX(i);
-               const y = getY(point.weight);
-               
-               return (
-                 <g key={i}>
-                   <circle
-                     cx={`${x}%`}
-                     cy={y}
-                     r={point.isToday ? "6" : "3.5"}
-                     fill={point.isToday ? "#ffffff" : "#ffffff"}
-                     stroke="#335f42"
-                     strokeWidth={point.isToday ? "4" : "2"}
-                     vectorEffect="non-scaling-stroke"
-                   />
-                   {/* Data Labels (values) */}
-                   <text
-                     x={`${x}%`}
-                     y={y - 12}
-                     textAnchor="middle"
-                     className={cn(
-                       "font-bold", 
-                       point.isToday ? "fill-[#335f42] text-[12px]" : "fill-ink text-[10px]"
-                     )}
-                     vectorEffect="non-scaling-stroke"
-                   >
-                     {point.weight.toFixed(1)}
-                   </text>
-                 </g>
-               );
-             })}
           </svg>
           
-          {/* X-axis labels (HTML overlay for proper font rendering without SVG scaling issues) */}
-          <div className="absolute bottom-0 left-0 right-0 flex justify-between px-[2%]">
-            {data.map((point, i) => (
-              <div key={i} className="flex flex-col items-center justify-end h-10 w-[14.28%]">
-                <span className={cn(
-                  "text-[10px] whitespace-nowrap",
-                  point.isToday ? "text-[#335f42] font-bold" : "text-ink-soft"
-                )}>
-                  {point.isToday ? "Today" : format(point.date, "eee")}
-                </span>
-                <span className={cn(
-                  "text-[9px] whitespace-nowrap",
-                  point.isToday ? "text-[#335f42]/80" : "text-muted"
-                )}>
-                  {format(point.date, "d MMM")}
-                </span>
-              </div>
-            ))}
+          {/* HTML Overlays for data points and labels (prevents oval stretching) */}
+          {data.map((point, i) => {
+             if (point.weight === null) return null;
+             const x = getX(i);
+             const y = getY(point.weight);
+             
+             return (
+               <div key={i} className="absolute inset-0 pointer-events-none">
+                 {/* Circle */}
+                 <div 
+                   className="absolute bg-white rounded-full"
+                   style={{
+                     left: `${x}%`,
+                     top: `${y}px`,
+                     width: point.isToday ? '12px' : '8px',
+                     height: point.isToday ? '12px' : '8px',
+                     border: `${point.isToday ? '4px' : '2px'} solid #335f42`,
+                     transform: 'translate(-50%, -50%)',
+                     zIndex: point.isToday ? 10 : 5
+                   }}
+                 />
+                 {/* Data Label */}
+                 <div
+                   className={cn(
+                     "absolute text-center transform -translate-x-1/2",
+                     point.isToday ? "text-[#335f42] font-bold text-[12px]" : "text-ink font-bold text-[10px]"
+                   )}
+                   style={{
+                     left: `${x}%`,
+                     top: `${y - 24}px`, // position above circle
+                     whiteSpace: 'nowrap'
+                   }}
+                 >
+                   {point.weight.toFixed(1)}
+                 </div>
+               </div>
+             );
+          })}
+          
+          {/* X-axis labels */}
+          <div className="absolute bottom-0 left-0 right-0 h-10 pointer-events-none">
+            {data.map((point, i) => {
+              const x = getX(i);
+              return (
+                <div 
+                  key={i} 
+                  className="absolute flex flex-col items-center justify-end h-full transform -translate-x-1/2"
+                  style={{ left: `${x}%` }}
+                >
+                  <span className={cn(
+                    "text-[10px] whitespace-nowrap",
+                    point.isToday ? "text-[#335f42] font-bold" : "text-ink-soft"
+                  )}>
+                    {point.isToday ? "Today" : format(point.date, "eee")}
+                  </span>
+                  <span className={cn(
+                    "text-[9px] whitespace-nowrap",
+                    point.isToday ? "text-[#335f42]/80" : "text-muted"
+                  )}>
+                    {format(point.date, "d MMM")}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

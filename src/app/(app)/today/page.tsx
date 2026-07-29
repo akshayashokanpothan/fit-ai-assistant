@@ -184,6 +184,9 @@ export default function TodayPage() {
           </div>
           <span className="text-[11px] text-ink-soft">Goal: {stepsTarget.toLocaleString()}</span>
         </div>
+
+        {/* Spacer for proper right padding on scroll */}
+        <div className="w-1 flex-shrink-0" aria-hidden="true" />
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,16 +326,16 @@ export default function TodayPage() {
       {/* 7. Quick Actions */}
       <section>
         <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Quick actions</h2>
-        <div className="flex gap-2">
-          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+        <div className="flex flex-col gap-3">
+          <Link href="/ai" className="w-full flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
             <Camera className="w-4 h-4 mr-2 text-primary" />
             Scan meal
           </Link>
-          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+          <Link href="/ai" className="w-full flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
             <CalendarPlus className="w-4 h-4 mr-2 text-primary" />
             Plan workout
           </Link>
-          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+          <Link href="/ai" className="w-full flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
             <MessageCircle className="w-4 h-4 mr-2 text-primary" />
             Ask coach
           </Link>
