@@ -186,14 +186,14 @@ export default function OnboardingPage() {
     }
 
     let finalAvatarUrl = avatarUrl;
-    let finalAvatarType = avatarType;
+
 
     if (!finalAvatarUrl) {
       const bg = "#F0FDF4"; 
       const fg = "#16A34A";
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><circle cx="50" cy="40" r="20" fill="${fg}"/><path d="M20 100 Q 50 60 80 100" fill="${fg}"/></svg>`;
       finalAvatarUrl = `data:image/svg+xml;base64,${btoa(svg)}`;
-      finalAvatarType = "avatar";
+
     }
 
     if (finalAvatarUrl) {

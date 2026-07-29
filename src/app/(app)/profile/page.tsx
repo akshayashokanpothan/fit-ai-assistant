@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/avatar";
 import { ProfileImageCropper } from "@/components/profile-image-cropper";
-import { resizeImageToDataUrl } from "@/lib/image-utils";
+
 import { cn } from "@/lib/utils";
 import type {
   DietPreference,

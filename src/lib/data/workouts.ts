@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDemoStore } from "@/lib/demo/store";
+
 import { useWorkouts as useSupabaseWorkouts } from "@/lib/workouts/workouts-context";
 import type { LoggedSet, Workout } from "@/types";
 

@@ -10,7 +10,7 @@ import type {
 import { createMockProvider } from "./mock-provider";
 import { createAnthropicProvider } from "./anthropic-provider";
 import { createGeminiProvider } from "./gemini-provider";
-import { createOpenAIProvider } from "./openai-provider"; // kept available for future use
+// import { createOpenAIProvider } from "./openai-provider"; // kept available for future use
 
 export * from "./types";
 

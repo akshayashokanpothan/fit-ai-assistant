@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDemoStore } from "@/lib/demo/store";
+
 import { useMeals as useSupabaseMeals } from "@/lib/meals/meals-context";
 import type { MealItem, MealType, DataSource } from "@/types";
 

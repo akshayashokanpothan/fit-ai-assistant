@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDemoStore } from "@/lib/demo/store";
+
 import { usePlans as useSupabasePlans } from "@/lib/plans/plans-context";
 
 /**
