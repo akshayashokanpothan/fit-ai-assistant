@@ -64,7 +64,7 @@ const SUPPORTED_MIME_TYPES = new Set([
 // checking for the sentinel phrase the route already embeds in the instruction.
 const SCREENSHOT_INSTRUCTION_SIGNAL = "fitness screenshot";
 
-export function createGeminiProvider(env: "PROD" | "DEV" = "PROD"): AIProvider {
+export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"): AIProvider {
   const apiKey = process.env[`GEMINI_API_KEY_${env}`];
 
   if (!apiKey) {
