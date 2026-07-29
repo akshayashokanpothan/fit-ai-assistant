@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useProfileDAL } from "@/lib/data/profile";
+
 import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { useMealsDAL } from "@/lib/data/meals";
-import { useActivities } from "@/lib/activities/activities-context";
+import { useBodyMetricsDAL } from "@/lib/data/body-metrics";
+import { useActivitiesDAL } from "@/lib/data/activities";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,10 +26,10 @@ interface HistoryEntry {
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { bodyMetrics } = useProfileDAL();
+  const { bodyMetrics } = useBodyMetricsDAL();
   const { workouts, error: workoutsError } = useWorkoutsDAL();
   const { meals, error: mealsError } = useMealsDAL();
-  const { activities } = useActivities();
+  const { activities } = useActivitiesDAL();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 
   const entries = useMemo<HistoryEntry[]>(() => {

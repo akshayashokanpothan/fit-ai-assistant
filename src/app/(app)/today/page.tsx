@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { useMealsDAL } from "@/lib/data/meals";
-import { useActivities } from "@/lib/activities/activities-context";
+import { useActivitiesDAL } from "@/lib/data/activities";
 import { useProfileDAL } from "@/lib/data/profile";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export default function TodayPage() {
   const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkoutsDAL();
   const { meals, loading: mealsLoading, error: mealsError } = useMealsDAL();
   const { profile, loading: profileLoading } = useProfileDAL();
-  const { activities } = useActivities();
+  const { activities } = useActivitiesDAL();
   const today = formatISO(new Date(), { representation: "date" });
 
   const todaysMeals = useMemo(

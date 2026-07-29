@@ -5,7 +5,7 @@ import { useDemoStore } from "@/lib/demo/store";
 import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { useMealsDAL } from "@/lib/data/meals";
 import { useProfileDAL } from "@/lib/data/profile";
-import { useActivities } from "@/lib/activities/activities-context";
+import { useActivitiesDAL } from "@/lib/data/activities";
 import { usePlansDAL } from "@/lib/data/plans";
 import { useHistoryDAL } from "@/lib/data/history";
 import { usePwa } from "@/lib/pwa/pwa-context";
@@ -52,7 +52,7 @@ export default function AIPage() {
   const { messages, conversation, addMessage, updateMessage } = useHistoryDAL();
   const { workouts } = useWorkoutsDAL();
   const { meals, confirmMeal } = useMealsDAL();
-  const { activities, confirmActivity } = useActivities();
+  const { activities, confirmActivity } = useActivitiesDAL();
   const { plans } = usePlansDAL();
   const { profile } = useProfileDAL();
   const { deferredPrompt, promptInstall, isInstalled } = usePwa();

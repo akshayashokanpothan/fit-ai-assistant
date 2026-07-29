@@ -15,6 +15,7 @@ import type {
   MemoryFact,
   Profile,
   UsageEventType,
+  Activity,
 } from "@/types";
 import {
   DEMO_BODY_METRICS,
@@ -22,6 +23,8 @@ import {
   DEMO_MESSAGES,
   DEMO_PROFILE,
   DEMO_USER_ID,
+  DEMO_TODAY_ACTIVITY,
+  DEMO_HISTORY_ACTIVITY,
 } from "./seed-data";
 
 
@@ -33,6 +36,7 @@ interface DemoState {
   bodyMetrics: BodyMetric[];
   conversation: Conversation;
   messages: ChatMessage[];
+  activities: Activity[];
   derivedMemory: MemoryFact[];
   usageCount: Record<UsageEventType, number>;
 }
@@ -44,6 +48,7 @@ function seedState(onboarded: boolean): DemoState {
     bodyMetrics: DEMO_BODY_METRICS,
     conversation: DEMO_CONVERSATION,
     messages: DEMO_MESSAGES,
+    activities: [...DEMO_TODAY_ACTIVITY, ...DEMO_HISTORY_ACTIVITY],
     derivedMemory: [
       {
         id: "mem-1",
@@ -83,6 +88,9 @@ interface DemoStoreValue {
   addMessage: (message: ChatMessage) => void;
   updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
   addBodyMetric: (weightKg: number) => void;
+  addActivity: (activity: Activity) => void;
+  updateActivity: (id: string, patch: Partial<Activity>) => void;
+  deleteActivity: (id: string) => void;
   recordUsage: (type: UsageEventType) => void;
   resetDemo: () => void;
 }
@@ -106,7 +114,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(raw);
         delete parsed.workouts;
         delete parsed.meals;
-        delete parsed.activities;
         delete parsed.plans;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setState({ ...seedState(false), ...parsed });
@@ -178,6 +185,24 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const addActivity = useCallback((activity: Activity) => {
+    setState((s) => ({ ...s, activities: [activity, ...s.activities] }));
+  }, []);
+
+  const updateActivity = useCallback((id: string, patch: Partial<Activity>) => {
+    setState((s) => ({
+      ...s,
+      activities: s.activities.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+    }));
+  }, []);
+
+  const deleteActivity = useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      activities: s.activities.filter((a) => a.id !== id),
+    }));
+  }, []);
+
   const recordUsage = useCallback((type: UsageEventType) => {
     setState((s) => ({
       ...s,
@@ -205,6 +230,9 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       addMessage,
       updateMessage,
       addBodyMetric,
+      addActivity,
+      updateActivity,
+      deleteActivity,
       recordUsage,
       resetDemo,
     }),
@@ -217,6 +245,9 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       addMessage,
       updateMessage,
       addBodyMetric,
+      addActivity,
+      updateActivity,
+      deleteActivity,
       recordUsage,
       resetDemo,
     ]

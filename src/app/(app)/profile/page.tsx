@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useProfileDAL } from "@/lib/data/profile";
+import { useBodyMetricsDAL } from "@/lib/data/body-metrics";
 import { useDemoStore } from "@/lib/demo/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,8 @@ export default function ProfilePage() {
   const { user } = useAuth();
   
   // Phase 7: Migrated to unified Profile DAL
-  const { profile, updateProfile: saveProfile, addBodyMetric } = useProfileDAL();
+  const { profile, updateProfile: saveProfile } = useProfileDAL();
+  const { addBodyMetric } = useBodyMetricsDAL();
   
   // Demo store is still needed here for resetDemo and avatarUrl (which is memory-only)
   const { state, updateProfile: updateDemoProfile, resetDemo } = useDemoStore();

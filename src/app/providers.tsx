@@ -5,7 +5,6 @@ import { AuthProvider } from "@/lib/auth/auth-context";
 import { ProfileProvider } from "@/lib/profile/profile-context";
 import { WorkoutsProvider } from "@/lib/workouts/workouts-context";
 import { MealsProvider } from "@/lib/meals/meals-context";
-import { ActivitiesProvider } from "@/lib/activities/activities-context";
 import { PlansProvider } from "@/lib/plans/plans-context";
 import { PwaProvider } from "@/lib/pwa/pwa-context";
 
@@ -16,11 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <WorkoutsProvider>
           <PwaProvider>
             <MealsProvider>
-              <ActivitiesProvider>
-                <PlansProvider>
-                  <DemoStoreProvider>{children}</DemoStoreProvider>
-                </PlansProvider>
-              </ActivitiesProvider>
+              <PlansProvider>
+                <DemoStoreProvider>{children}</DemoStoreProvider>
+              </PlansProvider>
             </MealsProvider>
           </PwaProvider>
         </WorkoutsProvider>
