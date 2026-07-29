@@ -8,6 +8,7 @@ import { useProfileDAL } from "@/lib/data/profile";
 import { useActivities } from "@/lib/activities/activities-context";
 import { usePlansDAL } from "@/lib/data/plans";
 import { useHistoryDAL } from "@/lib/data/history";
+import { usePwa } from "@/lib/pwa/pwa-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { ActivityReviewCard, type ActivityDraft } from "@/components/chat/activi
 import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
+import { PwaEngagementModal, PwaToasts } from "@/components/pwa-modals";
 import { Camera, Send, TriangleAlert, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workout, Plan, AIContext, Profile } from "@/types";
@@ -53,10 +55,17 @@ export default function AIPage() {
   const { activities, confirmActivity } = useActivities();
   const { plans } = usePlansDAL();
   const { profile } = useProfileDAL();
+  const { deferredPrompt, promptInstall, isInstalled } = usePwa();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [menuExpanded, setMenuExpanded] = useState(false);
+  
+  // PWA Modal state
+  const [showEngagementModal, setShowEngagementModal] = useState(false);
+  const [showRemindLaterToast, setShowRemindLaterToast] = useState(false);
+  const [showInstallSuccess, setShowInstallSuccess] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -130,6 +139,17 @@ export default function AIPage() {
       const data = (await res.json()) as { reply: string; card?: ChatMessage["card"] };
 
       updateMessage(thinkingId, { content: data.reply, card: data.card, status: "sent" });
+      
+      // Phase 8 PWA Trigger
+      if (!isInstalled && typeof window !== "undefined") {
+        const pwaPromptShown = localStorage.getItem("pace_pwa_prompt_shown");
+        if (!pwaPromptShown) {
+          localStorage.setItem("pace_pwa_prompt_shown", "true");
+          setTimeout(() => {
+            setShowEngagementModal(true);
+          }, 10000);
+        }
+      }
     } catch {
       updateMessage(thinkingId, {
         content:
@@ -406,6 +426,32 @@ export default function AIPage() {
           </Button>
         </div>
       </div>
+      
+      <PwaEngagementModal 
+        open={showEngagementModal} 
+        onOpenChange={setShowEngagementModal}
+        hasBeforeInstallPrompt={!!deferredPrompt}
+        onInstall={async () => {
+          if (deferredPrompt) {
+            const outcome = await promptInstall();
+            if (outcome === "accepted") {
+              setShowEngagementModal(false);
+              setShowInstallSuccess(true);
+            }
+          }
+        }}
+        onRemindLater={() => {
+          setShowEngagementModal(false);
+          setShowRemindLaterToast(true);
+        }}
+      />
+      
+      <PwaToasts 
+        showRemindLater={showRemindLaterToast}
+        showInstallSuccess={showInstallSuccess}
+        onCloseRemindLater={() => setShowRemindLaterToast(false)}
+        onCloseInstallSuccess={() => setShowInstallSuccess(false)}
+      />
     </div>
   );
 }
