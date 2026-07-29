@@ -148,9 +148,11 @@ export default function AIPage() {
       if (!isInstalled && typeof window !== "undefined") {
         const pwaPromptShown = localStorage.getItem("pace_pwa_prompt_shown");
         if (!pwaPromptShown) {
-          localStorage.setItem("pace_pwa_prompt_shown", "true");
           setTimeout(() => {
             setShowEngagementModal(true);
+            // Persist only after the modal has actually fired so a page
+            // refresh before the 10s elapses doesn't consume the one-time prompt.
+            localStorage.setItem("pace_pwa_prompt_shown", "true");
           }, 10000);
         }
       }
