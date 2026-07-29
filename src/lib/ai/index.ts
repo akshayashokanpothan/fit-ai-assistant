@@ -1,6 +1,7 @@
 import type { AIProvider } from "./types";
 import { createMockProvider } from "./mock-provider";
 import { createAnthropicProvider } from "./anthropic-provider";
+import { createGeminiProvider } from "./gemini-provider";
 
 export * from "./types";
 
@@ -19,7 +20,9 @@ export function getAIProvider(): AIProvider {
 
   const requested = process.env.AI_PROVIDER ?? "mock";
 
-  if (requested === "anthropic" && process.env.ANTHROPIC_API_KEY) {
+  if (requested === "gemini") {
+    cached = createGeminiProvider();
+  } else if (requested === "anthropic" && process.env.ANTHROPIC_API_KEY) {
     cached = createAnthropicProvider();
   } else {
     cached = createMockProvider();
