@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDemoStore } from "@/lib/demo/store";
 import { createClient } from "@/utils/supabase/client";
@@ -18,6 +18,10 @@ export function useHistoryDAL() {
 
   const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
   const [dbConversation, setDbConversation] = useState<Conversation | null>(null);
+
+  const idMapRef = useRef<Record<string, string>>({});
+  const pendingConvRef = useRef<Promise<string> | null>(null);
+  const pendingMsgRef = useRef<Record<string, Promise<string> | undefined>>({});
 
   // For Phase 7, we proxy the demo store if not logged in, or wire to Supabase.
   const messages = useMemo(() => {
@@ -113,39 +117,56 @@ export function useHistoryDAL() {
         setDbMessages((prev) => [...prev, message]);
 
         try {
-          let validConversationId = message.conversationId;
+          const insertTask = async () => {
+            let validConversationId = message.conversationId;
 
-          if (!validConversationId || validConversationId === "default") {
-            const { data: newConv, error: convError } = await supabase
-              .from("conversations")
-              .insert({ user_id: user.id })
-              .select()
-              .single();
+            if (!validConversationId || validConversationId === "default") {
+              if (dbConversation?.id && dbConversation.id !== "default") {
+                validConversationId = dbConversation.id;
+              } else if (pendingConvRef.current) {
+                validConversationId = await pendingConvRef.current;
+              } else {
+                pendingConvRef.current = (async () => {
+                  const { data: newConv, error: convError } = await supabase
+                    .from("conversations")
+                    .insert({ user_id: user.id })
+                    .select()
+                    .single();
 
-            if (convError) throw convError;
+                  if (convError) throw convError;
 
-            validConversationId = newConv.id;
-            
-            setDbConversation({
-              id: newConv.id,
-              userId: newConv.user_id,
-              title: newConv.title,
-              createdAt: newConv.created_at,
-              updatedAt: newConv.updated_at,
-            });
-          }
+                  setDbConversation({
+                    id: newConv.id,
+                    userId: newConv.user_id,
+                    title: newConv.title,
+                    createdAt: newConv.created_at,
+                    updatedAt: newConv.updated_at,
+                  });
+                  return newConv.id;
+                })();
+                validConversationId = await pendingConvRef.current;
+              }
+            }
 
-          const { error } = await supabase.from("messages").insert({
-            id: message.id,
-            conversation_id: validConversationId,
-            user_id: user.id,
-            role: message.role,
-            content: message.content,
-            attachments: message.attachments || [],
-            card: message.card || null,
-            created_at: message.createdAt,
-          });
-          if (error) throw error;
+            const { data: insertedMsg, error } = await supabase.from("messages").insert({
+              // id: message.id, // Omitted so Supabase generates a UUID
+              conversation_id: validConversationId,
+              user_id: user.id,
+              role: message.role,
+              content: message.content,
+              attachments: message.attachments || [],
+              card: message.card || null,
+              created_at: message.createdAt,
+            }).select().single();
+
+            if (error) throw error;
+            return insertedMsg.id;
+          };
+
+          const p = insertTask();
+          pendingMsgRef.current[message.id] = p;
+          const realId = await p;
+          idMapRef.current[message.id] = realId;
         } catch (err) {
           console.error("Failed to insert message:", err);
           // Revert optimistic update on failure
@@ -155,7 +176,7 @@ export function useHistoryDAL() {
         demoStore.addMessage(message);
       }
     },
-    [user, demoStore, supabase]
+    [user, dbConversation, demoStore, supabase]
   );
 
   const updateMessage = useCallback(
@@ -175,10 +196,16 @@ export function useHistoryDAL() {
         // If there's nothing to persist (e.g. only status changed to "sent"), we can skip DB call
         if (Object.keys(payload).length > 0) {
           try {
+            let realId = idMapRef.current[id];
+            if (!realId && pendingMsgRef.current[id]) {
+              realId = await pendingMsgRef.current[id];
+            }
+            realId = realId || id;
+
             const { error } = await supabase
               .from("messages")
               .update(payload)
-              .eq("id", id)
+              .eq("id", realId)
               .eq("user_id", user.id);
 
             if (error) throw error;
