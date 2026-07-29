@@ -3,13 +3,14 @@
 import { useState } from "react";
 import type { Plan } from "@/types";
 import { Button } from "@/components/ui/button";
-import { useDemoStore } from "@/lib/demo/store";
+import { usePlans } from "@/lib/plans/plans-context";
 import { format } from "date-fns";
 import { Check } from "lucide-react";
 
 export function PlanPreviewCard({ plan }: { plan: Plan }) {
-  const { setActivePlan } = useDemoStore();
+  const { setActivePlan } = usePlans();
   const [accepted, setAccepted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   return (
     <div className="mt-2 w-full max-w-sm rounded-[var(--radius-lg)] border border-line bg-surface p-4">
@@ -42,12 +43,20 @@ export function PlanPreviewCard({ plan }: { plan: Plan }) {
       ) : (
         <Button
           className="mt-4 w-full"
-          onClick={() => {
-            setActivePlan(plan);
-            setAccepted(true);
+          disabled={saving}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await setActivePlan(plan);
+              setAccepted(true);
+            } catch (err) {
+              console.error(err);
+            } finally {
+              setSaving(false);
+            }
           }}
         >
-          Accept plan
+          {saving ? "Saving…" : "Accept plan"}
         </Button>
       )}
     </div>

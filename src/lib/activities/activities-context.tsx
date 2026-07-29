@@ -70,6 +70,7 @@ export function ActivitiesProvider({ children }: { children: React.ReactNode }) 
       }, 0);
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(user.id);
   }, [authLoading, user, load]);
 

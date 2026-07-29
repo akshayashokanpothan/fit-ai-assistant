@@ -17,7 +17,6 @@ import type {
   MealItem,
   MealType,
   MemoryFact,
-  Plan,
   Profile,
   UsageEventType,
   Workout,
@@ -48,7 +47,6 @@ interface DemoState {
   meals: import("@/types").Meal[];
   activities: Activity[];
   workouts: Workout[];
-  plans: Plan[];
   bodyMetrics: BodyMetric[];
   conversation: Conversation;
   messages: ChatMessage[];
@@ -63,7 +61,6 @@ function seedState(onboarded: boolean): DemoState {
     meals: [...DEMO_TODAY_MEALS, ...DEMO_HISTORY_MEALS],
     activities: [...DEMO_TODAY_ACTIVITY, ...DEMO_HISTORY_ACTIVITY],
     workouts: [DEMO_TODAY_WORKOUT, DEMO_HISTORY_WORKOUT],
-    plans: [],
     bodyMetrics: DEMO_BODY_METRICS,
     conversation: DEMO_CONVERSATION,
     messages: DEMO_MESSAGES,
@@ -128,8 +125,6 @@ interface DemoStoreValue {
     perceivedDifficulty: NonNullable<Workout["perceivedDifficulty"]>,
     note?: string
   ) => void;
-  setActivePlan: (plan: Plan) => void;
-  markPlanDayComplete: (planId: string, dayIndex: number) => void;
   addBodyMetric: (weightKg: number) => void;
   recordUsage: (type: UsageEventType) => void;
   todaySummary: () => {
@@ -337,27 +332,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const setActivePlan = useCallback((plan: Plan) => {
-    setState((s) => ({
-      ...s,
-      plans: [plan, ...s.plans.map((p) => ({ ...p, status: "superseded" as const }))],
-    }));
-  }, []);
-
-  const markPlanDayComplete = useCallback((planId: string, dayIndex: number) => {
-    setState((s) => ({
-      ...s,
-      plans: s.plans.map((p) =>
-        p.id === planId
-          ? {
-              ...p,
-              days: p.days.map((d) => (d.dayIndex === dayIndex ? { ...d, completed: true } : d)),
-            }
-          : p
-      ),
-    }));
-  }, []);
-
   const addBodyMetric = useCallback((weightKg: number) => {
     setState((s) => ({
       ...s,
@@ -418,8 +392,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       logSet,
       markExerciseSkipped,
       completeWorkout,
-      setActivePlan,
-      markPlanDayComplete,
       addBodyMetric,
       recordUsage,
       todaySummary,
@@ -438,8 +410,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       logSet,
       markExerciseSkipped,
       completeWorkout,
-      setActivePlan,
-      markPlanDayComplete,
       addBodyMetric,
       recordUsage,
       todaySummary,

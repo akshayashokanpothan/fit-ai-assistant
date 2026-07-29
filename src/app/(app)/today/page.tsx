@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
 import { useActivities } from "@/lib/activities/activities-context";
@@ -18,7 +17,6 @@ import { getExerciseById } from "@/lib/demo/seed-exercises";
 
 export default function TodayPage() {
   const router = useRouter();
-  const { state } = useDemoStore();
   const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
   const { meals, loading: mealsLoading, error: mealsError } = useMeals();
   const { profile, loading: profileLoading } = useProfile();

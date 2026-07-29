@@ -98,7 +98,7 @@ export default function HistoryPage() {
     }
 
     return items.sort((a, b) => b.date.localeCompare(a.date));
-  }, [state, filter, workouts, meals]);
+  }, [state, filter, workouts, meals, activities]);
 
   const grouped: Record<Group, HistoryEntry[]> = {
     Today: entries.filter((e) => e.group === "Today"),
