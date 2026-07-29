@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
 import { useActivities } from "@/lib/activities/activities-context";
-import { useProfile } from "@/lib/profile/profile-context";
+import { useProfileDAL } from "@/lib/data/profile";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,7 +19,7 @@ export default function TodayPage() {
   const router = useRouter();
   const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
   const { meals, loading: mealsLoading, error: mealsError } = useMeals();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading } = useProfileDAL();
   const { activities } = useActivities();
   const today = formatISO(new Date(), { representation: "date" });
 

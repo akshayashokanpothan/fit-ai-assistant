@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
+import { useProfileDAL } from "@/lib/data/profile";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
 import { useActivities } from "@/lib/activities/activities-context";
@@ -25,7 +25,7 @@ interface HistoryEntry {
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { state } = useDemoStore();
+  const { bodyMetrics } = useProfileDAL();
   const { workouts, error: workoutsError } = useWorkouts();
   const { meals, error: mealsError } = useMeals();
   const { activities } = useActivities();
@@ -86,7 +86,7 @@ export default function HistoryPage() {
     }
 
     if (filter === "all") {
-      for (const bm of state.bodyMetrics) {
+      for (const bm of bodyMetrics) {
         items.push({
           date: bm.recordedAt,
           group: groupFor(bm.recordedAt),
@@ -98,7 +98,7 @@ export default function HistoryPage() {
     }
 
     return items.sort((a, b) => b.date.localeCompare(a.date));
-  }, [state, filter, workouts, meals, activities]);
+  }, [bodyMetrics, filter, workouts, meals, activities]);
 
   const grouped: Record<Group, HistoryEntry[]> = {
     Today: entries.filter((e) => e.group === "Today"),

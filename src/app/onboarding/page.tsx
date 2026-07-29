@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useProfile } from "@/lib/profile/profile-context";
+import { useProfileDAL } from "@/lib/data/profile";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,7 @@ const DIETS: { value: DietPreference; label: string }[] = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, completeOnboarding } = useProfile();
+  const { profile, loading: profileLoading, completeOnboarding } = useProfileDAL();
   // Avatar has no column in public.profiles yet (Storage is a future
   // phase), so it's the one field that still goes through the demo store —
   // see the comment near the submit handler below.

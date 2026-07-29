@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
-import { useProfile } from "@/lib/profile/profile-context";
+import { useProfileDAL } from "@/lib/data/profile";
 import { useActivities } from "@/lib/activities/activities-context";
 import { usePlans } from "@/lib/plans/plans-context";
 import { buildAIContext } from "@/lib/demo/build-context";
@@ -50,7 +50,7 @@ export default function AIPage() {
   const { meals, confirmMeal } = useMeals();
   const { activities, confirmActivity } = useActivities();
   const { plans } = usePlans();
-  const { profile } = useProfile();
+  const { profile } = useProfileDAL();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [busy, setBusy] = useState(false);

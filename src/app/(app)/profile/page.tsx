@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDemoStore } from "@/lib/demo/store";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useProfile } from "@/lib/profile/profile-context";
+import { useProfileDAL } from "@/lib/data/profile";
+import { useDemoStore } from "@/lib/demo/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,11 +48,12 @@ const FREQUENCIES: TrainingFrequency[] = [2, 3, 4, 5, 6];
 export default function ProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { profile, updateProfile: saveProfile } = useProfile();
-  // Avatar has no public.profiles column yet, and meals/workouts/activity/
-  // body-metric-history/reset are out of Phase 2's scope — those stay on
-  // the demo store exactly as before.
-  const { state, updateProfile: updateDemoProfile, addBodyMetric, resetDemo } = useDemoStore();
+  
+  // Phase 7: Migrated to unified Profile DAL
+  const { profile, updateProfile: saveProfile, addBodyMetric } = useProfileDAL();
+  
+  // Demo store is still needed here for resetDemo and avatarUrl (which is memory-only)
+  const { state, updateProfile: updateDemoProfile, resetDemo } = useDemoStore();
 
   const [form, setForm] = useState({
     displayName: profile?.displayName ?? "",

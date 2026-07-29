@@ -7,8 +7,8 @@ import { formatISO } from "date-fns";
  * never the full store. Keeps payloads small and predictable.
  *
  * `profile` is passed separately from `state` deliberately: it must come
- * from the authenticated Supabase profile (see `useProfile()` /
- * `src/lib/profile/profile-context.tsx`), not the demo store — meals,
+ * from the authenticated Supabase profile (see `useProfileDAL()` /
+ * `src/lib/data/profile.ts`), not the demo store — meals,
  * activities, workouts, plans, body metrics, and derived memory remain
  * demo-store-backed until a later phase migrates them too.
  */
