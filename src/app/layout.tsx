@@ -10,6 +10,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 import { Providers } from "./providers";
+import { SplashScreen } from "@/components/splash-screen";
 
 export const metadata: Metadata = {
   title: "Pace AI — your everyday fitness companion",
@@ -42,6 +43,7 @@ export default function RootLayout({
       }
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
+        <SplashScreen />
         <Providers>{children}</Providers>
       </body>
     </html>
