@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useWorkouts } from "@/lib/workouts/workouts-context";
+import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -21,7 +21,7 @@ const DIFFICULTIES: { value: NonNullable<Workout["perceivedDifficulty"]>; label:
 export default function ActiveWorkoutPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { workouts, startWorkout, logSet, markExerciseSkipped, completeWorkout, error: contextError } = useWorkouts();
+  const { workouts, startWorkout, logSet, markExerciseSkipped, completeWorkout, error: contextError } = useWorkoutsDAL();
   const [localError, setLocalError] = useState<string | null>(null);
 
   const workout = workouts.find((w) => w.id === params.id);

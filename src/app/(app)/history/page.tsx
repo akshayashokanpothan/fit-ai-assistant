@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProfileDAL } from "@/lib/data/profile";
-import { useWorkouts } from "@/lib/workouts/workouts-context";
-import { useMeals } from "@/lib/meals/meals-context";
+import { useWorkoutsDAL } from "@/lib/data/workouts";
+import { useMealsDAL } from "@/lib/data/meals";
 import { useActivities } from "@/lib/activities/activities-context";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +26,8 @@ interface HistoryEntry {
 export default function HistoryPage() {
   const router = useRouter();
   const { bodyMetrics } = useProfileDAL();
-  const { workouts, error: workoutsError } = useWorkouts();
-  const { meals, error: mealsError } = useMeals();
+  const { workouts, error: workoutsError } = useWorkoutsDAL();
+  const { meals, error: mealsError } = useMealsDAL();
   const { activities } = useActivities();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 

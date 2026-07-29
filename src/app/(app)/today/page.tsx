@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useWorkouts } from "@/lib/workouts/workouts-context";
-import { useMeals } from "@/lib/meals/meals-context";
+import { useWorkoutsDAL } from "@/lib/data/workouts";
+import { useMealsDAL } from "@/lib/data/meals";
 import { useActivities } from "@/lib/activities/activities-context";
 import { useProfileDAL } from "@/lib/data/profile";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
@@ -17,8 +17,8 @@ import { getExerciseById } from "@/lib/demo/seed-exercises";
 
 export default function TodayPage() {
   const router = useRouter();
-  const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
-  const { meals, loading: mealsLoading, error: mealsError } = useMeals();
+  const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkoutsDAL();
+  const { meals, loading: mealsLoading, error: mealsError } = useMealsDAL();
   const { profile, loading: profileLoading } = useProfileDAL();
   const { activities } = useActivities();
   const today = formatISO(new Date(), { representation: "date" });

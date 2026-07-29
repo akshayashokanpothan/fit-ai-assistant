@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDemoStore } from "@/lib/demo/store";
-import { useWorkouts } from "@/lib/workouts/workouts-context";
-import { useMeals } from "@/lib/meals/meals-context";
+import { useWorkoutsDAL } from "@/lib/data/workouts";
+import { useMealsDAL } from "@/lib/data/meals";
 import { useProfileDAL } from "@/lib/data/profile";
 import { useActivities } from "@/lib/activities/activities-context";
-import { usePlans } from "@/lib/plans/plans-context";
+import { usePlansDAL } from "@/lib/data/plans";
+import { useHistoryDAL } from "@/lib/data/history";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -45,11 +46,12 @@ interface PendingImage {
 }
 
 export default function AIPage() {
-  const { state, addMessage, updateMessage, recordUsage } = useDemoStore();
-  const { workouts } = useWorkouts();
-  const { meals, confirmMeal } = useMeals();
+  const { recordUsage, state: demoState } = useDemoStore();
+  const { messages, conversation, addMessage, updateMessage } = useHistoryDAL();
+  const { workouts } = useWorkoutsDAL();
+  const { meals, confirmMeal } = useMealsDAL();
   const { activities, confirmActivity } = useActivities();
-  const { plans } = usePlans();
+  const { plans } = usePlansDAL();
   const { profile } = useProfileDAL();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
@@ -61,7 +63,7 @@ export default function AIPage() {
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [state.messages, busy]);
+  }, [messages, busy]);
 
   function pushMessage(msg: ChatMessage) {
     addMessage(msg);
@@ -77,7 +79,7 @@ export default function AIPage() {
       // the seeded demo profile for an authenticated user.
       pushMessage({
         id: `msg-${Date.now()}-profile-error`,
-        conversationId: state.conversation.id,
+        conversationId: conversation?.id ?? "default",
         role: "assistant",
         content: "I couldn't load your profile just now. Please refresh and try again.",
         createdAt: new Date().toISOString(),
@@ -90,7 +92,7 @@ export default function AIPage() {
 
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      conversationId: state.conversation.id,
+      conversationId: conversation?.id ?? "default",
       role: "user",
       content: trimmed,
       createdAt: new Date().toISOString(),
@@ -101,7 +103,7 @@ export default function AIPage() {
     const thinkingId = `msg-${Date.now()}-thinking`;
     pushMessage({
       id: thinkingId,
-      conversationId: state.conversation.id,
+      conversationId: conversation?.id ?? "default",
       role: "assistant",
       content: "",
       createdAt: new Date().toISOString(),
@@ -112,8 +114,8 @@ export default function AIPage() {
     recordUsage("ai_message");
 
     try {
-      const context: AIContext = buildAIContext(profile, state, workouts, meals, activities, plans);
-      const history = state.messages
+      const context: AIContext = buildAIContext(profile, demoState, workouts, meals, activities, plans);
+      const history = messages
         .filter((m) => m.status !== "sending")
         .slice(-10)
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
@@ -173,7 +175,7 @@ export default function AIPage() {
 
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      conversationId: state.conversation.id,
+      conversationId: conversation?.id ?? "default",
       role: "user",
       content: kind === "meal" ? "Here's my meal" : "Here's my activity screenshot",
       attachments: [
@@ -193,7 +195,7 @@ export default function AIPage() {
     const thinkingId = `msg-${Date.now()}-thinking`;
     pushMessage({
       id: thinkingId,
-      conversationId: state.conversation.id,
+      conversationId: conversation?.id ?? "default",
       role: "assistant",
       content: "",
       createdAt: new Date().toISOString(),
@@ -247,7 +249,7 @@ export default function AIPage() {
     <div className="flex h-[calc(100vh-120px)] flex-col">
       <div className="flex-1 overflow-y-auto px-4 pt-5">
         <div className="space-y-5 pb-4">
-          {state.messages.map((m) => {
+          {messages.map((m) => {
             const displayMessage =
               m.id === WELCOME_MESSAGE_ID ? { ...m, content: greetingContent(profile) } : m;
             return (

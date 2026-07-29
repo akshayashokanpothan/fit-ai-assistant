@@ -3,12 +3,12 @@
 import { useState } from "react";
 import type { Plan } from "@/types";
 import { Button } from "@/components/ui/button";
-import { usePlans } from "@/lib/plans/plans-context";
+import { usePlansDAL } from "@/lib/data/plans";
 import { format } from "date-fns";
 import { Check } from "lucide-react";
 
 export function PlanPreviewCard({ plan }: { plan: Plan }) {
-  const { setActivePlan } = usePlans();
+  const { setActivePlan } = usePlansDAL();
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
 

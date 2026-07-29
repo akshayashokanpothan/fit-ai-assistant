@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import type { Workout } from "@/types";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Button } from "@/components/ui/button";
-import { useWorkouts } from "@/lib/workouts/workouts-context";
+import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { Dumbbell } from "lucide-react";
 
 export function WorkoutPreviewCard({ workout }: { workout: Workout }) {
   const router = useRouter();
-  const { createWorkout } = useWorkouts();
+  const { createWorkout } = useWorkoutsDAL();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
