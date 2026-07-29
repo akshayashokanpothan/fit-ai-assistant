@@ -78,7 +78,7 @@ const DIETS: { value: DietPreference; label: string }[] = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, completeOnboarding, updateAvatar } = useProfileDAL();
+  const { profile, loading: profileLoading, completeOnboarding } = useProfileDAL();
   // Avatar has no column in public.profiles yet (Storage is a future
   // phase), so it's the one field that still goes through the demo store —
   // see the comment near the submit handler below.
@@ -197,7 +197,6 @@ export default function OnboardingPage() {
     }
 
     if (finalAvatarUrl) {
-      await updateAvatar(finalAvatarUrl, finalAvatarType);
       updateDemoProfile({ avatarUrl: finalAvatarUrl });
     }
 

@@ -51,7 +51,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   
   // Phase 7: Migrated to unified Profile DAL
-  const { profile, updateProfile: saveProfile, addBodyMetric, updateAvatar } = useProfileDAL();
+  const { profile, updateProfile: saveProfile, addBodyMetric } = useProfileDAL();
   
   // Demo store is still needed here for resetDemo and avatarUrl (which is memory-only)
   const { state, updateProfile: updateDemoProfile, resetDemo } = useDemoStore();
@@ -123,7 +123,6 @@ export default function ProfilePage() {
     setRawImageSrc(null);
     setAvatarBusy(true);
     try {
-      await updateAvatar(croppedImageBase64, "photo");
       updateDemoProfile({ avatarUrl: croppedImageBase64 });
     } catch {
       setAvatarError("Failed to save avatar.");

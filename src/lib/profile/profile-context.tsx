@@ -15,7 +15,6 @@ import {
   ensureProfile,
   updateProfile as updateProfileRow,
   completeOnboarding as completeOnboardingRow,
-  setAvatar as setAvatarQuery,
   type ProfileWritable,
 } from "./queries";
 import type { Profile } from "@/types";
@@ -30,7 +29,6 @@ interface ProfileContextValue {
   error: string | null;
   updateProfile: (patch: ProfileWritable) => Promise<ProfileResult>;
   completeOnboarding: (patch: ProfileWritable) => Promise<ProfileResult>;
-  updateAvatar: (url: string | null, type: "photo" | "avatar") => Promise<ProfileResult>;
   refetchProfile: () => Promise<void>;
 }
 
@@ -128,22 +126,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     [supabase, user]
   );
 
-  const handleUpdateAvatar = useCallback(
-    async (url: string | null, type: "photo" | "avatar"): Promise<ProfileResult> => {
-      if (!user) return { error: "Not signed in." };
-      try {
-        await setAvatarQuery(supabase, user.id, url, type);
-        setProfile((prev) => (prev ? { ...prev, avatarUrl: url, avatarType: type } : null));
-        return { error: null };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Couldn't save your avatar.";
-        setError(message);
-        return { error: message };
-      }
-    },
-    [supabase, user]
-  );
-
   const refetchProfile = useCallback(async () => {
     if (!user) return;
     await load(user.id);
@@ -158,10 +140,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       error,
       updateProfile: handleUpdate,
       completeOnboarding: handleCompleteOnboarding,
-      updateAvatar: handleUpdateAvatar,
       refetchProfile,
     }),
-    [profile, authLoading, loading, error, handleUpdate, handleCompleteOnboarding, handleUpdateAvatar, refetchProfile]
+    [profile, authLoading, loading, error, handleUpdate, handleCompleteOnboarding, refetchProfile]
   );
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;

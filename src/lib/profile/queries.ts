@@ -93,29 +93,6 @@ function writableToRow(patch: ProfileWritable): Record<string, unknown> {
   return row;
 }
 
-async function attachAvatar(supabase: SupabaseClient, userId: string, profile: Profile): Promise<Profile> {
-  const { data } = await supabase
-    .from("memories")
-    .select("value")
-    .eq("user_id", userId)
-    .eq("layer", "profile")
-    .eq("key", "avatar")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (data) {
-    try {
-      const parsed = JSON.parse(data.value);
-      profile.avatarUrl = parsed.url;
-      profile.avatarType = parsed.type;
-    } catch {
-      // ignore
-    }
-  }
-  return profile;
-}
-
 const POSTGRES_UNIQUE_VIOLATION = "23505";
 
 /** Fetches the authenticated user's profile row, or null if none exists yet. */
@@ -131,7 +108,7 @@ export async function fetchProfile(
 
   if (error) throw new Error(error.message);
   if (!data) return null;
-  return attachAvatar(supabase, userId, rowToProfile(data as ProfileRow));
+  return rowToProfile(data as ProfileRow);
 }
 
 /** Ensures the authenticated user has exactly one `public.profiles` row */
@@ -153,7 +130,7 @@ export async function ensureProfile(supabase: SupabaseClient, userId: string): P
     throw new Error(error.message);
   }
 
-  return attachAvatar(supabase, userId, rowToProfile(data as ProfileRow));
+  return rowToProfile(data as ProfileRow);
 }
 
 /** Updates the authenticated user's profile row, returning the updated profile. */
@@ -170,7 +147,7 @@ export async function updateProfile(
     .single();
 
   if (error) throw new Error(error.message);
-  return attachAvatar(supabase, userId, rowToProfile(data as ProfileRow));
+  return rowToProfile(data as ProfileRow);
 }
 
 /** Saves the submitted onboarding fields and marks onboarding complete */
@@ -187,35 +164,5 @@ export async function completeOnboarding(
     .single();
 
   if (error) throw new Error(error.message);
-  return attachAvatar(supabase, userId, rowToProfile(data as ProfileRow));
-}
-
-export async function setAvatar(
-  supabase: SupabaseClient,
-  userId: string,
-  url: string | null,
-  type: "photo" | "avatar"
-): Promise<void> {
-  // First clear any existing avatar memory
-  await supabase
-    .from("memories")
-    .delete()
-    .eq("user_id", userId)
-    .eq("layer", "profile")
-    .eq("key", "avatar");
-
-  if (!url) return; // If null, we just delete it
-
-  // Insert the new avatar memory
-  const { error } = await supabase
-    .from("memories")
-    .insert({
-      user_id: userId,
-      layer: "profile",
-      key: "avatar",
-      value: JSON.stringify({ url, type }),
-      confidence: 1.0,
-    });
-
-  if (error) throw new Error(error.message);
+  return rowToProfile(data as ProfileRow);
 }
