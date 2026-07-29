@@ -11,6 +11,7 @@ import { createMockProvider } from "./mock-provider";
 import { createAnthropicProvider } from "./anthropic-provider";
 import { createGeminiProvider } from "./gemini-provider";
 import { createOpenAIProvider } from "./openai-provider";
+import { createOllamaProvider } from "./ollama-provider";
 
 export * from "./types";
 
@@ -71,6 +72,7 @@ function createResilientGeminiProvider(): AIProvider {
 /**
  * Provider factory. Selection is environment-based:
  *  - AI_PROVIDER=gemini -> Gemini (Primary) with OpenAI (Fallback)
+ *  - AI_PROVIDER=ollama -> Local Ollama provider
  *  - AI_PROVIDER=anthropic (+ ANTHROPIC_API_KEY) -> real Anthropic adapter
  *  - anything else / missing credentials -> deterministic mock
  *
@@ -84,6 +86,8 @@ export function getAIProvider(): AIProvider {
 
   if (requested === "gemini") {
     cached = createResilientGeminiProvider();
+  } else if (requested === "ollama") {
+    cached = createOllamaProvider();
   } else if (requested === "anthropic" && process.env.ANTHROPIC_API_KEY) {
     cached = createAnthropicProvider();
   } else {
