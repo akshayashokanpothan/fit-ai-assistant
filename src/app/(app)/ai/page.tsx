@@ -127,7 +127,11 @@ export default function AIPage() {
       const history = messages
         .filter((m) => m.status !== "sending")
         .slice(-10)
-        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+        .map((m) => ({ 
+          role: m.role as "user" | "assistant", 
+          content: m.id === WELCOME_MESSAGE_ID ? greetingContent(profile) : m.content 
+        }))
+        .filter((m) => m.content.trim().length > 0);
 
       const res = await fetch("/api/ai/chat", {
         method: "POST",
