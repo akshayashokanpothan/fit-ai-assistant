@@ -29,12 +29,14 @@ export function MealReviewCard({
   onConfirm,
 }: {
   initialItems: MealItem[];
-  onConfirm: (items: MealItem[], mealType: MealType) => void;
+  onConfirm: (items: MealItem[], mealType: MealType) => Promise<void>;
 }) {
   const [items, setItems] = useState(initialItems);
   const [mealType, setMealType] = useState<MealType>(defaultMealType());
   const [editing, setEditing] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const total = sumNutrition(items.map((i) => i.nutrition));
 
@@ -60,10 +62,17 @@ export function MealReviewCard({
         <button
           onClick={() => setEditing((e) => !e)}
           className="flex items-center gap-1 text-xs text-primary"
+          disabled={loading}
         >
           <Pencil className="h-3 w-3" /> {editing ? "Done" : "Edit"}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-600 border border-red-200">
+          {error}
+        </div>
+      )}
 
       <ul className="space-y-2">
         {items.map((item) => (
@@ -120,6 +129,7 @@ export function MealReviewCard({
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-line-strong text-ink-soft"
             }`}
+            disabled={loading}
           >
             {mt.label}
           </button>
@@ -128,13 +138,21 @@ export function MealReviewCard({
 
       <Button
         className="mt-4 w-full"
-        disabled={items.length === 0}
-        onClick={() => {
-          onConfirm(items, mealType);
-          setConfirmed(true);
+        disabled={items.length === 0 || loading}
+        onClick={async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            await onConfirm(items, mealType);
+            setConfirmed(true);
+          } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to save meal");
+          } finally {
+            setLoading(false);
+          }
         }}
       >
-        Confirm meal
+        {loading ? "Saving..." : "Confirm meal"}
       </Button>
     </div>
   );

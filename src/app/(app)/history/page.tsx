@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
+import { useMeals } from "@/lib/meals/meals-context";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,14 @@ export default function HistoryPage() {
   const router = useRouter();
   const { state } = useDemoStore();
   const { workouts, error: workoutsError } = useWorkouts();
+  const { meals, error: mealsError } = useMeals();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 
   const entries = useMemo<HistoryEntry[]>(() => {
     const items: HistoryEntry[] = [];
 
     if (filter === "all" || filter === "meals") {
-      for (const m of state.meals) {
+      for (const m of meals) {
         if (m.confirmationState !== "confirmed") continue;
         items.push({
           date: m.eventTime,
@@ -94,7 +96,7 @@ export default function HistoryPage() {
     }
 
     return items.sort((a, b) => b.date.localeCompare(a.date));
-  }, [state, filter, workouts]);
+  }, [state, filter, workouts, meals]);
 
   const grouped: Record<Group, HistoryEntry[]> = {
     Today: entries.filter((e) => e.group === "Today"),
@@ -109,6 +111,12 @@ export default function HistoryPage() {
       {workoutsError && (
         <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
           Failed to load workouts: {workoutsError}
+        </div>
+      )}
+
+      {mealsError && (
+        <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          Failed to load meals: {mealsError}
         </div>
       )}
 

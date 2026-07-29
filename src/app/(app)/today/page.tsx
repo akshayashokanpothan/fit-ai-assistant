@@ -4,29 +4,31 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
+import { useMeals } from "@/lib/meals/meals-context";
 import { useProfile } from "@/lib/profile/profile-context";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { sumNutrition } from "@/lib/nutrition/seed-foods";
 import { Footprints, Dumbbell, UtensilsCrossed, MessageCircle } from "lucide-react";
 import { formatISO, format } from "date-fns";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 
 export default function TodayPage() {
   const router = useRouter();
-  const { state, todaySummary } = useDemoStore();
+  const { state } = useDemoStore();
   const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
+  const { meals, loading: mealsLoading, error: mealsError } = useMeals();
   const { profile, loading: profileLoading } = useProfile();
   const today = formatISO(new Date(), { representation: "date" });
-  const summary = todaySummary();
 
   const todaysMeals = useMemo(
     () =>
-      state.meals
+      meals
         .filter((m) => m.eventTime.slice(0, 10) === today && m.confirmationState === "confirmed")
         .sort((a, b) => a.eventTime.localeCompare(b.eventTime)),
-    [state.meals, today]
+    [meals, today]
   );
   const todaysActivity = state.activities.filter((a) => a.eventDate === today);
   const todaysWorkout = workouts.find((w) => w.scheduledFor === today);
@@ -64,7 +66,7 @@ export default function TodayPage() {
   // the parent (app) layout already gates this page behind a loaded,
   // onboarded profile, so this is a defensive fallback rather than the
   // expected path.
-  if (profileLoading || workoutsLoading || !profile) {
+  if (profileLoading || workoutsLoading || mealsLoading || !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
@@ -72,12 +74,15 @@ export default function TodayPage() {
     );
   }
 
-  // Consumed-so-far totals (kcal/protein/carbs/fat) come from today's
-  // logged meals — still demo-store-backed, out of Phase 3's scope. Only
-  // the target itself is recomputed from the real, authenticated profile
-  // (same existing formula, src/lib/nutrition/targets.ts — data source
-  // changed, not the calculation).
+  // Consumed-so-far totals (kcal/protein/carbs/fat) come from today's logged meals.
   const targets = estimateDailyTargets(profile);
+  const totals = sumNutrition(todaysMeals.map((m) => m.totalNutrition));
+  const summary = {
+    kcal: Math.round(totals.kcal),
+    proteinG: Math.round(totals.proteinG),
+    carbsG: Math.round(totals.carbsG),
+    fatG: Math.round(totals.fatG),
+  };
   const proteinPct = targets.proteinG
     ? Math.min(100, Math.round((summary.proteinG / targets.proteinG) * 100))
     : 0;
@@ -88,6 +93,12 @@ export default function TodayPage() {
         {format(new Date(), "EEEE, d MMMM")}
       </p>
       <h1 className="mt-1 font-display text-[26px] font-medium leading-tight text-ink">Today</h1>
+
+      {mealsError && (
+        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          Failed to load meals: {mealsError}
+        </div>
+      )}
 
       {/* Nutrition summary — plain numbers, not a KPI grid */}
       <div className="mt-6 rounded-[var(--radius-lg)] border border-line bg-surface p-5">

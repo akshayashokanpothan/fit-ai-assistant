@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
+import { useMeals } from "@/lib/meals/meals-context";
 import { useProfile } from "@/lib/profile/profile-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
@@ -42,9 +43,10 @@ interface PendingImage {
 }
 
 export default function AIPage() {
-  const { state, addMessage, updateMessage, confirmMeal, confirmActivity, recordUsage } =
+  const { state, addMessage, updateMessage, confirmActivity, recordUsage } =
     useDemoStore();
   const { workouts } = useWorkouts();
+  const { meals, confirmMeal } = useMeals();
   const { profile } = useProfile();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
@@ -105,7 +107,7 @@ export default function AIPage() {
     recordUsage("ai_message");
 
     try {
-      const context: AIContext = buildAIContext(profile, state, workouts);
+      const context: AIContext = buildAIContext(profile, state, workouts, meals);
       const history = state.messages
         .filter((m) => m.status !== "sending")
         .slice(-10)
@@ -247,8 +249,8 @@ export default function AIPage() {
               <MessageBubble
                 key={m.id}
                 message={displayMessage}
-                onConfirmMeal={(items, mealType, mediaUploadId) => {
-                  confirmMeal(mealType, items, "image_ai", mediaUploadId);
+                onConfirmMeal={async (items, mealType, mediaUploadId) => {
+                  await confirmMeal(mealType, items, "image_ai", mediaUploadId);
                 }}
                 onConfirmActivity={(draft) => {
                   confirmActivity(draft, "screenshot_ai");
@@ -356,7 +358,7 @@ function MessageBubble({
   onConfirmActivity,
 }: {
   message: ChatMessage;
-  onConfirmMeal: (items: MealItem[], mealType: MealType, mediaUploadId?: string) => void;
+  onConfirmMeal: (items: MealItem[], mealType: MealType, mediaUploadId?: string) => Promise<void>;
   onConfirmActivity: (draft: ActivityDraft) => void;
 }) {
   const isUser = message.role === "user";
@@ -398,8 +400,8 @@ function MessageBubble({
         {message.card?.kind === "meal_review" && (
           <MealReviewCard
             initialItems={(message.card.data as { items: MealItem[] }).items}
-            onConfirm={(items, mealType) =>
-              onConfirmMeal(
+            onConfirm={async (items, mealType) =>
+              await onConfirmMeal(
                 items,
                 mealType,
                 (message.card!.data as { mediaUploadId?: string }).mediaUploadId
