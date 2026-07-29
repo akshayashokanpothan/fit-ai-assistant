@@ -22,10 +22,10 @@ export function useHistoryDAL() {
   // For Phase 7, we proxy the demo store if not logged in, or wire to Supabase.
   const messages = useMemo(() => {
     if (!user) return demoStore.state.messages;
-    if (dbMessages.length === 0 || dbMessages[0].id !== "msg-welcome") {
-      return [DEMO_MESSAGES[0], ...dbMessages];
-    }
-    return dbMessages;
+    // Ensure exactly one welcome message is at the top of the chat timeline
+    // as an in-memory fallback, without persisting it to Supabase.
+    const filteredDb = dbMessages.filter((m) => m.id !== "msg-welcome");
+    return [DEMO_MESSAGES[0], ...filteredDb];
   }, [user, dbMessages, demoStore.state.messages]);
 
   const conversation = user ? dbConversation : demoStore.state.conversation;
