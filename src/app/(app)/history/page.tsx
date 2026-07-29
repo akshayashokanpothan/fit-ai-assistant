@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
+import { useActivities } from "@/lib/activities/activities-context";
 import { getExerciseById } from "@/lib/demo/seed-exercises";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default function HistoryPage() {
   const { state } = useDemoStore();
   const { workouts, error: workoutsError } = useWorkouts();
   const { meals, error: mealsError } = useMeals();
+  const { activities } = useActivities();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 
   const entries = useMemo<HistoryEntry[]>(() => {
@@ -65,7 +67,7 @@ export default function HistoryPage() {
     }
 
     if (filter === "all" || filter === "activity") {
-      for (const a of state.activities) {
+      for (const a of activities) {
         if (a.confirmationState !== "confirmed") continue;
         items.push({
           date: a.eventDate,

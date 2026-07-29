@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
+import { useActivities } from "@/lib/activities/activities-context";
 import { useProfile } from "@/lib/profile/profile-context";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export default function TodayPage() {
   const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkouts();
   const { meals, loading: mealsLoading, error: mealsError } = useMeals();
   const { profile, loading: profileLoading } = useProfile();
+  const { activities } = useActivities();
   const today = formatISO(new Date(), { representation: "date" });
 
   const todaysMeals = useMemo(
@@ -30,7 +32,7 @@ export default function TodayPage() {
         .sort((a, b) => a.eventTime.localeCompare(b.eventTime)),
     [meals, today]
   );
-  const todaysActivity = state.activities.filter((a) => a.eventDate === today);
+  const todaysActivity = activities.filter((a) => a.eventDate === today && a.confirmationState === "confirmed");
   const todaysWorkout = workouts.find((w) => w.scheduledFor === today);
 
   type ThreadItem = {

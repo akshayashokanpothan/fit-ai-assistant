@@ -114,10 +114,6 @@ interface DemoStoreValue {
     source: "image_ai" | "manual" | "screenshot_ai",
     mediaUploadId?: string
   ) => void;
-  confirmActivity: (
-    draft: Partial<Activity> & { activityType: string },
-    source: "screenshot_ai" | "manual"
-  ) => void;
   upsertWorkout: (workout: Workout) => void;
   startWorkout: (workoutId: string) => void;
   logSet: (
@@ -236,27 +232,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       setState((s) => ({ ...s, meals: [meal, ...s.meals] }));
-    },
-    []
-  );
-
-  const confirmActivity = useCallback(
-    (draft: Partial<Activity> & { activityType: string }, source: "screenshot_ai" | "manual") => {
-      const activity: Activity = {
-        id: `activity-${Date.now()}`,
-        userId: DEMO_USER_ID,
-        source,
-        activityType: draft.activityType,
-        steps: draft.steps,
-        distanceKm: draft.distanceKm,
-        activeKcal: draft.activeKcal,
-        durationMin: draft.durationMin,
-        eventDate: todayISO(),
-        confidence: draft.confidence ?? 0.9,
-        confirmationState: "confirmed",
-        createdAt: new Date().toISOString(),
-      };
-      setState((s) => ({ ...s, activities: [activity, ...s.activities] }));
     },
     []
   );
@@ -438,7 +413,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       addMessage,
       updateMessage,
       confirmMeal,
-      confirmActivity,
       upsertWorkout,
       startWorkout,
       logSet,
@@ -459,7 +433,6 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       addMessage,
       updateMessage,
       confirmMeal,
-      confirmActivity,
       upsertWorkout,
       startWorkout,
       logSet,

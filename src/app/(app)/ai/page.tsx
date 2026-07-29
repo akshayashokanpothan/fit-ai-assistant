@@ -5,6 +5,7 @@ import { useDemoStore } from "@/lib/demo/store";
 import { useWorkouts } from "@/lib/workouts/workouts-context";
 import { useMeals } from "@/lib/meals/meals-context";
 import { useProfile } from "@/lib/profile/profile-context";
+import { useActivities } from "@/lib/activities/activities-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -43,10 +44,10 @@ interface PendingImage {
 }
 
 export default function AIPage() {
-  const { state, addMessage, updateMessage, confirmActivity, recordUsage } =
-    useDemoStore();
+  const { state, addMessage, updateMessage, recordUsage } = useDemoStore();
   const { workouts } = useWorkouts();
   const { meals, confirmMeal } = useMeals();
+  const { activities, confirmActivity } = useActivities();
   const { profile } = useProfile();
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
@@ -107,7 +108,7 @@ export default function AIPage() {
     recordUsage("ai_message");
 
     try {
-      const context: AIContext = buildAIContext(profile, state, workouts, meals);
+      const context: AIContext = buildAIContext(profile, state, workouts, meals, activities);
       const history = state.messages
         .filter((m) => m.status !== "sending")
         .slice(-10)

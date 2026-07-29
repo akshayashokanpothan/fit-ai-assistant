@@ -15,13 +15,13 @@ import { formatISO } from "date-fns";
 export function buildAIContext(
   profile: Profile,
   state: {
-    activities: Activity[];
     plans: Plan[];
     bodyMetrics: BodyMetric[];
     derivedMemory: MemoryFact[];
   },
   workouts: Workout[],
-  meals: Meal[]
+  meals: Meal[],
+  activities: Activity[]
 ): AIContext {
   const today = formatISO(new Date(), { representation: "date" });
   const goalTargets = estimateDailyTargets(profile);
@@ -29,7 +29,7 @@ export function buildAIContext(
   const todaysMeals = meals.filter(
     (m) => m.eventTime.slice(0, 10) === today && m.confirmationState === "confirmed"
   );
-  const todaysActivities = state.activities.filter((a) => a.eventDate === today);
+  const todaysActivities = activities.filter((a) => a.eventDate === today && a.confirmationState === "confirmed");
   const todaysWorkout = workouts.find((w) => w.scheduledFor === today) ?? null;
 
   const nutritionTotals = todaysMeals.reduce(

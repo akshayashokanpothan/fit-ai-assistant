@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth/auth-context";
 import { ProfileProvider } from "@/lib/profile/profile-context";
 import { WorkoutsProvider } from "@/lib/workouts/workouts-context";
 import { MealsProvider } from "@/lib/meals/meals-context";
+import { ActivitiesProvider } from "@/lib/activities/activities-context";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ProfileProvider>
         <WorkoutsProvider>
           <MealsProvider>
-            <DemoStoreProvider>{children}</DemoStoreProvider>
+            <ActivitiesProvider>
+              <DemoStoreProvider>{children}</DemoStoreProvider>
+            </ActivitiesProvider>
           </MealsProvider>
         </WorkoutsProvider>
       </ProfileProvider>
