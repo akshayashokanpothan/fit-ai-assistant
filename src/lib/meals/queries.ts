@@ -28,10 +28,6 @@ interface MealRow {
   media_upload_id: string | null;
   notes: string | null;
   created_at: string;
-  total_kcal: number | null;
-  total_protein_g: number | null;
-  total_carbs_g: number | null;
-  total_fat_g: number | null;
   meal_items?: MealItemRow[];
 }
 
@@ -54,18 +50,15 @@ function rowToMeal(row: MealRow): Meal {
     confidence: i.confidence,
   }));
 
+  const totalNutrition = sumNutrition(items.map(i => i.nutrition));
+
   return {
     id: row.id,
     userId: row.user_id,
     mealType: row.meal_type,
     eventTime: row.event_time,
     items,
-    totalNutrition: {
-      kcal: row.total_kcal ?? 0,
-      proteinG: row.total_protein_g ?? 0,
-      carbsG: row.total_carbs_g ?? 0,
-      fatG: row.total_fat_g ?? 0,
-    },
+    totalNutrition,
     source: row.source,
     confidence: row.confidence,
     confirmationState: row.confirmation_state,
@@ -97,7 +90,7 @@ export async function confirmMeal(
   source: DataSource,
   mediaUploadId?: string
 ): Promise<Meal> {
-  const totalNutrition = sumNutrition(items.map((i) => i.nutrition));
+
   const confidence =
     items.length > 0
       ? items.reduce((a, i) => a + i.confidence, 0) / items.length
@@ -113,10 +106,6 @@ export async function confirmMeal(
       confidence,
       confirmation_state: "confirmed",
       media_upload_id: mediaUploadId ?? null,
-      total_kcal: totalNutrition.kcal,
-      total_protein_g: totalNutrition.proteinG,
-      total_carbs_g: totalNutrition.carbsG,
-      total_fat_g: totalNutrition.fatG,
     })
     .select("*")
     .single();
