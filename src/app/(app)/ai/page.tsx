@@ -17,7 +17,7 @@ import { ActivityReviewCard, type ActivityDraft } from "@/components/chat/activi
 import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
-import { Camera, Send, TriangleAlert, X } from "lucide-react";
+import { Camera, Send, TriangleAlert, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workout, Plan, AIContext, Profile } from "@/types";
 
@@ -54,7 +54,9 @@ export default function AIPage() {
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [busy, setBusy] = useState(false);
+  const [menuExpanded, setMenuExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,7 +141,7 @@ export default function AIPage() {
 
   function onQuickAction(prompt: string) {
     if (prompt === "Log a meal") {
-      fileInputRef.current?.click();
+      setMenuExpanded(true);
       return;
     }
     sendText(prompt);
@@ -307,21 +309,78 @@ export default function AIPage() {
           <QuickActions onPick={onQuickAction} />
         </div>
 
-        <div className="flex items-end gap-2 pb-3">
+        <div className="flex items-end gap-2 pb-3 relative">
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={onFileSelected}
+            onChange={(e) => {
+              setMenuExpanded(false);
+              onFileSelected(e);
+            }}
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Attach photo"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-black/[0.04]"
-          >
-            <Camera className="h-5 w-5" />
-          </button>
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              setMenuExpanded(false);
+              onFileSelected(e);
+            }}
+          />
+          
+          <div className="relative">
+            {menuExpanded && (
+              <div className="absolute bottom-14 left-0 flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex items-center gap-3 w-max group"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface border border-line shadow-sm group-hover:bg-line-strong text-ink transition-colors">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                  <span className="text-[13px] font-medium text-ink bg-surface/90 px-3 py-1.5 rounded-full backdrop-blur-md shadow-sm border border-line-strong">
+                    Open Camera
+                  </span>
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-3 w-max group"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface border border-line shadow-sm group-hover:bg-line-strong text-ink transition-colors">
+                    <ImageIcon className="h-5 w-5" />
+                  </div>
+                  <span className="text-[13px] font-medium text-ink bg-surface/90 px-3 py-1.5 rounded-full backdrop-blur-md shadow-sm border border-line-strong">
+                    Choose from Gallery
+                  </span>
+                </button>
+              </div>
+            )}
+            
+            {menuExpanded && (
+              <div 
+                className="fixed inset-0 z-[-1]" 
+                onClick={() => setMenuExpanded(false)}
+                aria-hidden="true"
+              />
+            )}
+
+            <button
+              onClick={() => setMenuExpanded(!menuExpanded)}
+              aria-label={menuExpanded ? "Close menu" : "Attach media"}
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200",
+                menuExpanded 
+                  ? "bg-primary-soft text-primary rotate-90" 
+                  : "text-ink-soft hover:bg-black/[0.04]"
+              )}
+            >
+              {menuExpanded ? <X className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
+            </button>
+          </div>
           <Textarea
             rows={1}
             placeholder="What's on your mind?"
