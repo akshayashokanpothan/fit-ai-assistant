@@ -10,7 +10,6 @@ import { useDemoStore } from "@/lib/demo/store";
  */
 export function usePlansDAL() {
   const { user } = useAuth();
-  const demoStore = useDemoStore();
   
   // Placeholder: Phase 7 is implementing the DAL. 
   // We will map these to `useSupabasePlans` when it's fully integrated.

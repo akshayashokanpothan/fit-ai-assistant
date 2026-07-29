@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/avatar";
-import { resizeImageToDataUrl } from "@/lib/image-utils";
+import { ProfileImageCropper } from "@/components/profile-image-cropper";
 import { cn } from "@/lib/utils";
 import type {
   DietPreference,
@@ -78,7 +78,7 @@ const DIETS: { value: DietPreference; label: string }[] = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, completeOnboarding } = useProfileDAL();
+  const { profile, loading: profileLoading, completeOnboarding, updateAvatar } = useProfileDAL();
   // Avatar has no column in public.profiles yet (Storage is a future
   // phase), so it's the one field that still goes through the demo store —
   // see the comment near the submit handler below.
@@ -89,7 +89,9 @@ export default function OnboardingPage() {
 
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarType, setAvatarType] = useState<"photo" | "avatar">("photo");
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [age, setAge] = useState("");
@@ -104,10 +106,7 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Onboarding requires a signed-in user to persist anything — send an
-  // unauthenticated visitor to sign in first. Once auth/profile resolve, an
-  // already-onboarded user landing here (e.g. via back button) is sent on
-  // to /today rather than redoing onboarding.
+  // Onboarding requires a signed-in user to persist anything
   useEffect(() => {
     if (authLoading || profileLoading) return;
     if (!user) {
@@ -123,20 +122,28 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    
     setAvatarBusy(true);
     try {
-      const dataUrl = await resizeImageToDataUrl(file);
-      setAvatarUrl(dataUrl);
+      // Create object URL for the cropper
+      const src = URL.createObjectURL(file);
+      setRawImageSrc(src);
     } catch {
-      // Optional field — silently ignore and let the user continue without a photo.
+      // silently ignore and let the user continue without a photo
     } finally {
       setAvatarBusy(false);
     }
   }
 
+  function handleCropComplete(croppedImageBase64: string) {
+    setAvatarUrl(croppedImageBase64);
+    setAvatarType("photo");
+    setRawImageSrc(null);
+  }
+
   const canAdvance: Record<StepId, boolean> = {
     welcome: displayName.trim().length > 0,
-    photo: true,
+    photo: true, // Always true so they can skip
     goal: !!goal,
     body: !!age && !!heightCm && !!weightKg && !!sex,
     experience: !!experience,
@@ -171,15 +178,29 @@ export default function OnboardingPage() {
       dietPreference: diet,
       limitations: limitations.trim() || null,
     });
+    
     if (error) {
       setSubmitError(error);
       setSubmitting(false);
       return;
     }
-    // Avatar has no public.profiles column yet — kept in the demo store as
-    // a UI-only convenience so the top bar/Profile page keep showing it,
-    // without inventing a database column for it in this phase.
-    if (avatarUrl) updateDemoProfile({ avatarUrl });
+
+    let finalAvatarUrl = avatarUrl;
+    let finalAvatarType = avatarType;
+
+    if (!finalAvatarUrl) {
+      const bg = "#F0FDF4"; 
+      const fg = "#16A34A";
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><circle cx="50" cy="40" r="20" fill="${fg}"/><path d="M20 100 Q 50 60 80 100" fill="${fg}"/></svg>`;
+      finalAvatarUrl = `data:image/svg+xml;base64,${btoa(svg)}`;
+      finalAvatarType = "avatar";
+    }
+
+    if (finalAvatarUrl) {
+      await updateAvatar(finalAvatarUrl, finalAvatarType);
+      updateDemoProfile({ avatarUrl: finalAvatarUrl });
+    }
+
     router.replace("/today");
   }
 
@@ -238,24 +259,22 @@ export default function OnboardingPage() {
 
         {step === "photo" && (
           <StepShell
-            title="Add a photo?"
-            subtitle="Totally optional — you can skip this and add one later from Profile."
+            title="Add your profile photo"
+            subtitle="Personalize your Pace AI experience. Your profile image will sync across devices."
           >
             <div className="flex flex-col items-center gap-4 pt-2">
               <Avatar src={avatarUrl} size={96} />
-              <div className="flex gap-2">
+              <div className="flex flex-col items-center gap-3 w-full max-w-xs mt-2">
                 <Button
-                  variant="outline"
+                  className="w-full"
                   disabled={avatarBusy}
                   onClick={() => avatarInputRef.current?.click()}
                 >
-                  {avatarBusy ? "Uploading…" : avatarUrl ? "Change photo" : "Add photo"}
+                  {avatarBusy ? "Uploading…" : avatarUrl ? "Change photo" : "Choose Photo"}
                 </Button>
-                {avatarUrl && (
-                  <Button variant="ghost" onClick={() => setAvatarUrl(null)}>
-                    Remove
-                  </Button>
-                )}
+                <Button variant="ghost" className="w-full text-muted hover:text-ink" onClick={next}>
+                  Skip for now
+                </Button>
               </div>
               <input
                 ref={avatarInputRef}
@@ -266,6 +285,14 @@ export default function OnboardingPage() {
               />
             </div>
           </StepShell>
+        )}
+
+        {rawImageSrc && (
+          <ProfileImageCropper
+            imageSrc={rawImageSrc}
+            onCropComplete={handleCropComplete}
+            onCancel={() => setRawImageSrc(null)}
+          />
         )}
 
         {step === "goal" && (

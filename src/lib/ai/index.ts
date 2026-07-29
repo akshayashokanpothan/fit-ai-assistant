@@ -41,7 +41,7 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     async generateText(input: GenerateTextInput): Promise<GenerateTextOutput> {
       try {
         return await primary.generateText(input);
-      } catch (err) {
+      } catch {
         console.warn(
           "[AI Resilience] Primary provider (Gemini) failed to generate text. Rerouting to secondary fallback provider (Gemini FALLBACK)."
         );
@@ -49,7 +49,7 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
         if (secondary) {
           try {
             return await secondary.generateText(input);
-          } catch (err2) {
+          } catch {
              console.warn(
               "[AI Resilience] Secondary provider (Gemini FALLBACK) failed. Rerouting to tertiary fallback provider (Mock)."
             );
@@ -69,11 +69,11 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     ): Promise<GenerateStructuredOutput<T>> {
       try {
         return await primary.generateStructuredOutput(input);
-      } catch (err) {
+      } catch {
         if (secondary) {
           try {
             return await secondary.generateStructuredOutput(input);
-          } catch (err2) {}
+          } catch {}
         }
         return await tertiary.generateStructuredOutput(input);
       }
@@ -82,14 +82,14 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     async analyzeImage(input: AnalyzeImageInput): Promise<AnalyzeImageOutput> {
       try {
         return await primary.analyzeImage(input);
-      } catch (err) {
+      } catch {
          console.warn(
           "[AI Resilience] Primary provider (Gemini) failed to analyze image. Rerouting to secondary fallback provider (Gemini FALLBACK)."
         );
         if (secondary) {
           try {
             return await secondary.analyzeImage(input);
-          } catch (err2) {
+          } catch {
              console.warn(
               "[AI Resilience] Secondary provider (Gemini FALLBACK) failed. Rerouting to tertiary fallback provider (Mock)."
             );

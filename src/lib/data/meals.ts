@@ -12,7 +12,6 @@ import type { MealItem, MealType, DataSource } from "@/types";
  */
 export function useMealsDAL() {
   const { user } = useAuth();
-  const demoStore = useDemoStore();
   const supabaseMeals = useSupabaseMeals();
 
   // If we have a user and Supabase isn't loading, use Supabase meals. 

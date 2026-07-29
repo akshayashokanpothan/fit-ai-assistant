@@ -25,6 +25,7 @@ export interface Profile {
   // will hold a Storage URL/path instead — no UI change required for that
   // transition, since consumers just render whatever string is here.
   avatarUrl?: string | null;
+  avatarType?: "photo" | "avatar";
   goal: Goal | null;
   age: number | null;
   sex: "male" | "female" | "other" | null;

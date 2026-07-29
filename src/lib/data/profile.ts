@@ -61,6 +61,18 @@ export function useProfileDAL() {
     [user, demoStore, supabase]
   );
 
+  const updateAvatar = useCallback(
+    async (url: string | null, type: "photo" | "avatar") => {
+      if (user) {
+        return await supabaseProfile.updateAvatar(url, type);
+      } else {
+        demoStore.updateAvatar(url, type); // Assuming we'll add this if needed
+        return { error: null };
+      }
+    },
+    [user, demoStore, supabaseProfile]
+  );
+
   const loading = user ? supabaseProfile.loading : false;
   const error = user ? supabaseProfile.error : null;
 
@@ -71,6 +83,7 @@ export function useProfileDAL() {
     bodyMetrics,
     updateProfile,
     completeOnboarding,
+    updateAvatar,
     addBodyMetric,
   };
 }

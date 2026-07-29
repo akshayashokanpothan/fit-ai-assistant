@@ -79,6 +79,7 @@ interface DemoStoreValue {
   hydrated: boolean;
   completeOnboarding: (profile: Partial<Profile>) => void;
   updateProfile: (patch: Partial<Profile>) => void;
+  updateAvatar: (url: string | null, type: "photo" | "avatar") => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
   addBodyMetric: (weightKg: number) => void;
@@ -146,6 +147,13 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const updateAvatar = useCallback((url: string | null, type: "photo" | "avatar") => {
+    setState((s) => ({
+      ...s,
+      profile: { ...s.profile, avatarUrl: url, avatarType: type, updatedAt: new Date().toISOString() },
+    }));
+  }, []);
+
   const addMessage = useCallback((message: ChatMessage) => {
     setState((s) => ({ ...s, messages: [...s.messages, message] }));
   }, []);
@@ -193,6 +201,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       completeOnboarding,
       updateProfile,
+      updateAvatar,
       addMessage,
       updateMessage,
       addBodyMetric,
@@ -204,6 +213,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       completeOnboarding,
       updateProfile,
+      updateAvatar,
       addMessage,
       updateMessage,
       addBodyMetric,

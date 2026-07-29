@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/avatar";
+import { ProfileImageCropper } from "@/components/profile-image-cropper";
 import { resizeImageToDataUrl } from "@/lib/image-utils";
 import { cn } from "@/lib/utils";
 import type {
@@ -50,7 +51,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   
   // Phase 7: Migrated to unified Profile DAL
-  const { profile, updateProfile: saveProfile, addBodyMetric } = useProfileDAL();
+  const { profile, updateProfile: saveProfile, addBodyMetric, updateAvatar } = useProfileDAL();
   
   // Demo store is still needed here for resetDemo and avatarUrl (which is memory-only)
   const { state, updateProfile: updateDemoProfile, resetDemo } = useDemoStore();
@@ -99,6 +100,7 @@ export default function ProfilePage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -108,10 +110,23 @@ export default function ProfilePage() {
     setAvatarError(null);
     setAvatarBusy(true);
     try {
-      const dataUrl = await resizeImageToDataUrl(file);
-      updateDemoProfile({ avatarUrl: dataUrl });
+      const src = URL.createObjectURL(file);
+      setRawImageSrc(src);
     } catch {
       setAvatarError("Couldn't use that photo — try a different image.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function handleCropComplete(croppedImageBase64: string) {
+    setRawImageSrc(null);
+    setAvatarBusy(true);
+    try {
+      await updateAvatar(croppedImageBase64, "photo");
+      updateDemoProfile({ avatarUrl: croppedImageBase64 });
+    } catch {
+      setAvatarError("Failed to save avatar.");
     } finally {
       setAvatarBusy(false);
     }
@@ -186,8 +201,7 @@ export default function ProfilePage() {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted">Optional — used only in the top bar and here.</p>
-          {avatarError && <p className="text-xs text-danger">{avatarError}</p>}
+          {avatarError && <p className="mt-1 text-xs text-danger">{avatarError}</p>}
         </div>
         <input
           ref={avatarInputRef}
@@ -197,6 +211,14 @@ export default function ProfilePage() {
           onChange={onAvatarSelected}
         />
       </div>
+
+      {rawImageSrc && (
+        <ProfileImageCropper
+          imageSrc={rawImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setRawImageSrc(null)}
+        />
+      )}
 
       <Section title="About you">
         <Field label="Name">

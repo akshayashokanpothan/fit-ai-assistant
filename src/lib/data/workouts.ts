@@ -12,7 +12,6 @@ import type { LoggedSet, Workout } from "@/types";
  */
 export function useWorkoutsDAL() {
   const { user } = useAuth();
-  const demoStore = useDemoStore();
   const supabaseWorkouts = useSupabaseWorkouts();
 
   // If we have a user, use Supabase workouts. 
