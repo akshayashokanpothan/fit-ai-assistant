@@ -20,7 +20,7 @@ import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
 import { PwaEngagementModal, PwaToasts } from "@/components/pwa-modals";
-import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles, Bot, Info, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workout, Plan, AIContext, Profile, Meal, Activity } from "@/types";
 
@@ -307,25 +307,48 @@ export default function AIPage() {
 
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col">
-      <div className="flex-1 overflow-y-auto px-4 pt-5">
+      <div className="flex items-center justify-between border-b border-line bg-surface/90 px-4 py-2.5 backdrop-blur-md sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-[#335f42]" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[14px] font-bold text-ink leading-tight">Pace AI Coach</span>
+            <span className="text-[11px] text-ink-soft">Online & ready to help</span>
+          </div>
+        </div>
+        <button aria-label="Info">
+          <Info className="h-5 w-5 text-ink-soft" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pt-3">
         <div className="space-y-5 pb-4">
           {messages.length === 1 && messages[0].id === WELCOME_MESSAGE_ID ? (
-            <div className="flex flex-col items-center pt-8 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center mb-5 shadow-sm border border-line-strong overflow-hidden relative">
-                 <div className="absolute inset-0 bg-primary/5" />
-                 <Sparkles className="w-8 h-8 text-primary relative z-10" />
+            <div className="flex flex-col items-center pt-6 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="w-20 h-20 bg-[#f7eedc] rounded-full flex items-center justify-center mb-5 shadow-sm overflow-hidden relative">
+                 <Bot className="w-10 h-10 text-[#335f42] relative z-10" />
+                 <Sparkles className="w-4 h-4 text-orange-400 absolute top-4 right-4" />
               </div>
               
-              <h2 className="text-[22px] font-bold text-ink mb-3 text-center tracking-tight px-4">
-                {greetingContent(profile, meals, workouts, activities).split('. ')[0] + '.'}
+              <h2 className="text-[26px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif">
+                Good morning,<br />Akshay 👋
               </h2>
               
-              <p className="text-[15px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
-                {greetingContent(profile, meals, workouts, activities).split('. ').slice(1).join('. ')}
+              <p className="text-[14px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
+                I&apos;m your fitness coach.<br />How can I help you today?
               </p>
               
               <div className="w-full">
                 <QuickActions onPick={onQuickAction} variant="empty" />
+              </div>
+
+              <div className="mt-6 flex items-center justify-center gap-1.5 text-muted">
+                <Lock className="h-3 w-3" />
+                <span className="text-[11px]">Your data is private and secure</span>
               </div>
             </div>
           ) : (
@@ -409,7 +432,7 @@ export default function AIPage() {
           </div>
         )}
 
-        <div className="flex items-end gap-2 pb-3 relative">
+        <div className="flex items-center gap-3 pb-3 relative">
           <input
             ref={fileInputRef}
             type="file"
@@ -472,36 +495,41 @@ export default function AIPage() {
               onClick={() => setMenuExpanded(!menuExpanded)}
               aria-label={menuExpanded ? "Close menu" : "Attach media"}
               className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-line bg-surface transition-all duration-200 shadow-sm",
                 menuExpanded 
                   ? "bg-primary-soft text-primary rotate-90" 
-                  : "text-ink-soft hover:bg-black/[0.04]"
+                  : "text-ink hover:bg-black/[0.04]"
               )}
             >
               {menuExpanded ? <X className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
             </button>
           </div>
-          <Textarea
-            rows={1}
-            placeholder="What's on your mind?"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendText(input);
-              }
-            }}
-            className="max-h-28 min-h-11 flex-1 py-2.5"
-          />
-          <Button
-            size="icon"
-            aria-label="Send"
-            disabled={!input.trim() || busy}
-            onClick={() => sendText(input)}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          
+          <div className="flex flex-1 items-center rounded-full border border-line-strong bg-surface pl-4 pr-1.5 py-1.5 shadow-sm">
+            <input
+              placeholder="Ask your coach anything..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendText(input);
+                }
+              }}
+              className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted py-1"
+            />
+            <button
+              aria-label="Send"
+              disabled={!input.trim() || busy}
+              onClick={() => sendText(input)}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full bg-[#335f42] text-white transition-opacity",
+                (!input.trim() || busy) && "opacity-50"
+              )}
+            >
+              <Send className="h-4 w-4 ml-0.5" />
+            </button>
+          </div>
         </div>
       </div>
       
@@ -554,31 +582,35 @@ function MessageBubble({
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[85%] flex-col", isUser ? "items-end" : "items-start")}>
-        {message.attachments?.map((a) => (
-          <div key={a.id} className="relative mb-1.5 h-40 w-40 overflow-hidden rounded-[var(--radius-md)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={a.previewUrl} alt="Attached" className="h-full w-full object-cover" />
-          </div>
-        ))}
-
         {message.status === "sending" ? (
           <TypingIndicator />
-        ) : message.content ? (
+        ) : message.content || (message.attachments && message.attachments.length > 0) ? (
           <div className={cn("flex", isUser ? "justify-end" : "justify-start mb-4")}>
             {!isUser && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary mr-3 shadow-sm border border-primary/20 mt-1">
-                <Sparkles className="h-4 w-4" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink mr-3 shadow-sm border border-line-strong mt-1">
+                <Bot className="h-4 w-4 text-[#335f42]" />
               </div>
             )}
             <div
               className={cn(
-                "rounded-[20px] px-4 py-3 text-[15px] leading-relaxed",
+                "rounded-[24px] px-4 py-3 text-[15px] leading-relaxed",
                 isUser 
-                  ? "bg-primary text-primary-ink rounded-tr-sm shadow-sm" 
-                  : "bg-surface border border-line-strong text-ink rounded-tl-sm shadow-sm",
+                  ? "bg-[#335f42] text-white rounded-tr-md shadow-sm" 
+                  : "bg-surface border border-line text-ink rounded-tl-md shadow-sm",
                 message.card?.kind === "safety_notice" && "border-danger-soft bg-danger-soft text-ink"
               )}
             >
+              {message.attachments?.length ? (
+                <div className="flex flex-col gap-2 mb-2">
+                  {message.attachments.map((a) => (
+                    <div key={a.id} className="relative h-40 w-48 overflow-hidden rounded-[16px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.previewUrl} alt="Attached" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               {message.card?.kind === "safety_notice" && (
                 <div className="mb-2 flex items-center gap-1.5 text-danger font-medium">
                   <TriangleAlert className="h-4 w-4" />
@@ -633,8 +665,8 @@ function MessageBubble({
 function TypingIndicator() {
   return (
     <div className="flex justify-start mb-4">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary mr-3 shadow-sm border border-primary/20 mt-1">
-        <Sparkles className="h-4 w-4 animate-pulse" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink mr-3 shadow-sm border border-line-strong mt-1">
+        <Bot className="h-4 w-4 text-[#335f42] animate-pulse" />
       </div>
       <div className="flex items-center gap-3 rounded-[20px] rounded-tl-sm border border-line-strong bg-surface px-4 py-3 shadow-sm">
         <span className="text-[14px] text-ink-soft font-medium animate-pulse">Coach is thinking</span>

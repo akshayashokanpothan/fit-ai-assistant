@@ -1,19 +1,55 @@
 "use client";
 
 import * as React from "react";
-import { Dumbbell, UtensilsCrossed, Sparkles, Activity } from "lucide-react";
+import { Camera, Dumbbell, Calendar, BarChart3, ChevronRight, Leaf } from "lucide-react";
 
 interface Action {
   text: string;
   icon: React.ElementType;
   desc?: string;
+  colorClass: string;
+  iconClass: string;
+  activeIcon: React.ElementType;
+  activeText: string;
 }
 
 const PROMPTS: Action[] = [
-  { text: "Today's workout", icon: Dumbbell, desc: "See your exercises" },
-  { text: "What should I eat?", icon: UtensilsCrossed, desc: "Get meal ideas" },
-  { text: "Plan my next 3 days", icon: Sparkles, desc: "Create a schedule" },
-  { text: "How am I doing today?", icon: Activity, desc: "Check progress" },
+  { 
+    text: "Scan my meal", 
+    desc: "Take a photo of your meal and get nutrition insights",
+    icon: Camera, 
+    colorClass: "bg-[#335f42]/10",
+    iconClass: "text-[#335f42]",
+    activeIcon: Camera,
+    activeText: "Scan meal"
+  },
+  { 
+    text: "Plan a workout", 
+    desc: "Get a customized workout based on your goals",
+    icon: Dumbbell, 
+    colorClass: "bg-orange-500/10",
+    iconClass: "text-orange-500",
+    activeIcon: Dumbbell,
+    activeText: "Plan workout"
+  },
+  { 
+    text: "Create a meal plan", 
+    desc: "Generate a meal plan for the next few days",
+    icon: Calendar, 
+    colorClass: "bg-purple-500/10",
+    iconClass: "text-purple-500",
+    activeIcon: Leaf,
+    activeText: "What should I eat?"
+  },
+  { 
+    text: "Check my progress", 
+    desc: "See your stats and recent activity",
+    icon: BarChart3, 
+    colorClass: "bg-slate-500/10",
+    iconClass: "text-slate-500",
+    activeIcon: BarChart3,
+    activeText: "Check progress"
+  },
 ];
 
 export function QuickActions({ 
@@ -25,22 +61,23 @@ export function QuickActions({
 }) {
   if (variant === "empty") {
     return (
-      <div className="grid grid-cols-1 gap-3 w-full mt-4">
+      <div className="flex flex-col gap-3 w-full mt-2 px-1">
         {PROMPTS.map((p) => {
           const Icon = p.icon;
           return (
             <button
               key={p.text}
               onClick={() => onPick(p.text)}
-              className="flex items-center gap-4 rounded-[20px] border border-line bg-surface p-4 text-left transition-colors hover:border-primary hover:bg-primary-soft/30 w-full"
+              className="flex items-center gap-4 rounded-[24px] border border-line bg-surface p-4 text-left shadow-sm transition-colors hover:border-line-strong active:bg-paper w-full group"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft/50 text-primary">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${p.colorClass} ${p.iconClass}`}>
                 <Icon className="h-5 w-5" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col flex-1">
                 <span className="text-[15px] font-bold text-ink">{p.text}</span>
-                <span className="text-[13px] text-ink-soft">{p.desc}</span>
+                <span className="text-[13px] text-ink-soft pr-2 leading-snug mt-0.5">{p.desc}</span>
               </div>
+              <ChevronRight className="h-4 w-4 text-muted group-hover:text-ink-soft shrink-0" />
             </button>
           )
         })}
@@ -49,17 +86,24 @@ export function QuickActions({
   }
 
   // Active chat (pills)
+  // The reference shows exactly 3 pills: Scan meal, Plan workout, What should I eat?
+  const activePrompts = PROMPTS.slice(0, 3);
+  
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-      {PROMPTS.map((p) => (
-        <button
-          key={p.text}
-          onClick={() => onPick(p.text)}
-          className="shrink-0 whitespace-nowrap rounded-[12px] border border-line-strong bg-surface px-4 py-2 text-[13px] font-medium text-ink-soft shadow-sm hover:border-primary hover:text-primary transition-colors"
-        >
-          {p.text}
-        </button>
-      ))}
+      {activePrompts.map((p) => {
+        const Icon = p.activeIcon;
+        return (
+          <button
+            key={p.activeText}
+            onClick={() => onPick(p.text)}
+            className="flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-full border border-line-strong bg-surface px-4 py-2 text-[13px] font-medium text-ink hover:border-[#335f42] hover:text-[#335f42] transition-colors shadow-sm"
+          >
+            <Icon className="h-4 w-4 text-[#335f42]/70" />
+            {p.activeText}
+          </button>
+        );
+      })}
       <div className="w-2 flex-shrink-0" />
     </div>
   );
