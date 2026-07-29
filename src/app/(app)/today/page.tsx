@@ -1,26 +1,41 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useWorkoutsDAL } from "@/lib/data/workouts";
 import { useMealsDAL } from "@/lib/data/meals";
 import { useActivitiesDAL } from "@/lib/data/activities";
 import { useProfileDAL } from "@/lib/data/profile";
+import { useBodyMetricsDAL } from "@/lib/data/body-metrics";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { sumNutrition } from "@/lib/nutrition/seed-foods";
-import { Footprints, Dumbbell, UtensilsCrossed, MessageCircle } from "lucide-react";
-import { formatISO, format } from "date-fns";
-import { getExerciseById } from "@/lib/demo/seed-exercises";
+import { 
+  Flame, 
+  Droplet, 
+  Footprints, 
+  Dumbbell, 
+  UtensilsCrossed, 
+  MessageCircle, 
+  Check, 
+  ChevronRight, 
+  Sparkles,
+  Camera,
+  CalendarPlus,
+  Moon,
+  Sun
+} from "lucide-react";
+import { formatISO } from "date-fns";
+import { WeightProgressChart } from "@/components/weight-progress-chart";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function TodayPage() {
-  const router = useRouter();
-  const { workouts, loading: workoutsLoading, error: workoutsError } = useWorkoutsDAL();
-  const { meals, loading: mealsLoading, error: mealsError } = useMealsDAL();
+  const { workouts, loading: workoutsLoading } = useWorkoutsDAL();
+  const { meals, loading: mealsLoading } = useMealsDAL();
   const { profile, loading: profileLoading } = useProfileDAL();
   const { activities } = useActivitiesDAL();
+  const { bodyMetrics } = useBodyMetricsDAL();
+  
   const today = formatISO(new Date(), { representation: "date" });
 
   const todaysMeals = useMemo(
@@ -33,39 +48,6 @@ export default function TodayPage() {
   const todaysActivity = activities.filter((a) => a.eventDate === today && a.confirmationState === "confirmed");
   const todaysWorkout = workouts.find((w) => w.scheduledFor === today);
 
-  type ThreadItem = {
-    time: string;
-    icon: React.ReactNode;
-    title: string;
-    detail: string;
-  };
-
-  const thread: ThreadItem[] = [
-    ...todaysMeals.map((m) => ({
-      time: format(new Date(m.eventTime), "h:mm a"),
-      icon: <UtensilsCrossed className="h-4 w-4" />,
-      title: capitalize(m.mealType),
-      detail: m.items.map((i) => `${i.quantityLabel} ${i.name}`).join(", "),
-    })),
-    ...todaysActivity.map((a) => ({
-      time: "Today",
-      icon: <Footprints className="h-4 w-4" />,
-      title: "Activity",
-      detail: [
-        a.steps ? `${a.steps.toLocaleString()} steps` : null,
-        a.distanceKm ? `${a.distanceKm} km` : null,
-        a.activeKcal ? `${a.activeKcal} kcal active` : null,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    })),
-  ].sort((a, b) => a.time.localeCompare(b.time));
-
-  // Never silently fall back to the seeded demo profile for an
-  // authenticated user — wait for the real profile to load. In practice
-  // the parent (app) layout already gates this page behind a loaded,
-  // onboarded profile, so this is a defensive fallback rather than the
-  // expected path.
   if (profileLoading || workoutsLoading || mealsLoading || !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
@@ -74,159 +56,289 @@ export default function TodayPage() {
     );
   }
 
-  // Consumed-so-far totals (kcal/protein/carbs/fat) come from today's logged meals.
+  // Calculate totals and targets
   const targets = estimateDailyTargets(profile);
   const totals = sumNutrition(todaysMeals.map((m) => m.totalNutrition));
   const summary = {
     kcal: Math.round(totals.kcal),
     proteinG: Math.round(totals.proteinG),
-    carbsG: Math.round(totals.carbsG),
-    fatG: Math.round(totals.fatG),
   };
-  const proteinPct = targets.proteinG
-    ? Math.min(100, Math.round((summary.proteinG / targets.proteinG) * 100))
-    : 0;
+
+  const steps = todaysActivity.reduce((acc, a) => acc + (a.steps || 0), 0);
+  const stepsTarget = 10000;
+
+  // Determine greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const firstName = profile.displayName ? profile.displayName.split(" ")[0] : "there";
 
   return (
-    <div className="px-5 pt-6">
-      <p className="font-display text-sm italic text-primary">
-        {format(new Date(), "EEEE, d MMMM")}
-      </p>
-      <h1 className="mt-1 font-display text-[26px] font-medium leading-tight text-ink">Today</h1>
-
-      {mealsError && (
-        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-          Failed to load meals: {mealsError}
+    <div className="px-5 pt-4 pb-8 space-y-6">
+      
+      {/* 1. Header (Greeting + Goal Progress) */}
+      <section>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="font-display text-[26px] font-bold text-ink flex items-center gap-2">
+              {greeting}, {firstName} <span role="img" aria-label="wave">👋</span>
+            </h1>
+            <p className="mt-1 text-[13px] text-ink-soft">
+              You&apos;re building a healthier you. Keep going!
+            </p>
+          </div>
+          
+          <div className="text-right">
+            <span className="block text-[11px] font-medium text-ink-soft mb-1">Weight goal</span>
+            {/* The user specifically asked to NOT use a mock target weight. Show 'Set your target weight' if absent. */}
+            <div className="flex items-center gap-1.5 justify-end mb-1">
+              <span className="font-bold text-[16px] text-ink">{profile.weightKg || "--"} <span className="text-[13px] font-medium">kg</span></span>
+              {/* As profile type doesn't have target weight, we follow the requirement to show empty state */}
+              <span className="text-ink-soft">→</span>
+              <span className="font-bold text-[16px] text-ink-soft">-- <span className="text-[13px] font-medium">kg</span></span>
+            </div>
+            <div className="h-1.5 w-[100px] bg-line rounded-full overflow-hidden ml-auto">
+               {/* No real progress value since we don't have a target weight in schema */}
+               <div className="h-full bg-primary w-[0%]" />
+            </div>
+            <span className="block text-[10px] text-ink-soft mt-1">Set your target weight</span>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Nutrition summary — plain numbers, not a KPI grid */}
-      <div className="mt-6 rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-        <div className="flex items-baseline justify-between">
-          <span className="tabular font-display text-3xl font-medium text-ink">
-            {summary.kcal.toLocaleString()}
-          </span>
-          <span className="text-sm text-muted">of ~{targets.kcal.toLocaleString()} kcal</span>
+      {/* 2. Last 7 Days Progress Graph */}
+      <section>
+         <WeightProgressChart metrics={bodyMetrics} />
+      </section>
+
+      {/* 3. Daily Metrics (Horizontal Scroll) */}
+      <section className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-5 px-5">
+        {/* Calories */}
+        <div className="min-w-[140px] rounded-[16px] bg-surface border border-line p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+             <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
+               <Flame className="w-3.5 h-3.5" />
+             </div>
+             <span className="text-[13px] font-medium text-ink">Calories</span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="font-display font-bold text-[20px] text-ink">{summary.kcal.toLocaleString()}</span>
+            <span className="text-[13px] font-medium text-ink-soft">/ {targets.kcal.toLocaleString()}</span>
+          </div>
+          <div className="h-1.5 w-full bg-line rounded-full overflow-hidden mb-2">
+             <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(100, (summary.kcal / (targets.kcal || 1)) * 100)}%` }} />
+          </div>
+          <span className="text-[11px] text-ink-soft">{(targets.kcal || 0) - summary.kcal} kcal left</span>
         </div>
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-ink-soft">Protein</span>
-          <span className="tabular text-ink-soft">
-            {summary.proteinG} / {targets.proteinG}g
-          </span>
+
+        {/* Protein */}
+        <div className="min-w-[140px] rounded-[16px] bg-surface border border-line p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+             <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+               {/* Using a custom pill icon for protein or dumbbell */}
+               <Dumbbell className="w-3.5 h-3.5" />
+             </div>
+             <span className="text-[13px] font-medium text-ink">Protein</span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="font-display font-bold text-[20px] text-ink">{summary.proteinG}</span>
+            <span className="text-[13px] font-medium text-ink-soft">/ {targets.proteinG} g</span>
+          </div>
+          <div className="h-1.5 w-full bg-line rounded-full overflow-hidden mb-2">
+             <div className="h-full bg-green-600 rounded-full" style={{ width: `${Math.min(100, (summary.proteinG / (targets.proteinG || 1)) * 100)}%` }} />
+          </div>
+          <span className="text-[11px] text-ink-soft">{(targets.proteinG || 0) - summary.proteinG} g left</span>
         </div>
-        <Progress value={proteinPct} className="mt-2" />
-      </div>
 
-      {/* Day thread — actual chronological sequence of the day */}
-      <div className="mt-8">
-        <h2 className="mb-4 text-sm font-medium text-ink-soft">What happened today</h2>
-        {thread.length === 0 ? (
-          <EmptyToday />
-        ) : (
-          <ol className="relative ml-3 space-y-6 border-l border-line pl-6">
-            {thread.map((item, idx) => (
-              <li key={idx} className="relative">
-                <span className="absolute -left-[31px] flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-primary">
-                  {item.icon}
-                </span>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[15px] font-medium text-ink">{item.title}</span>
-                  <span className="tabular text-xs text-muted">{item.time}</span>
-                </div>
-                <p className="mt-0.5 text-sm text-ink-soft">{item.detail}</p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+        {/* Water */}
+        <div className="min-w-[140px] rounded-[16px] bg-surface border border-line p-4 flex-shrink-0 opacity-70">
+          <div className="flex items-center gap-2 mb-3">
+             <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
+               <Droplet className="w-3.5 h-3.5" />
+             </div>
+             <span className="text-[13px] font-medium text-ink">Water</span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="font-display font-bold text-[20px] text-ink">-</span>
+            <span className="text-[13px] font-medium text-ink-soft">/ 3 L</span>
+          </div>
+          <div className="h-1.5 w-full bg-line rounded-full overflow-hidden mb-2">
+             <div className="h-full bg-blue-500 w-[0%]" />
+          </div>
+          <span className="text-[11px] text-ink-soft">Not tracked yet</span>
+        </div>
 
-      {/* Workout */}
-      <div className="mt-8">
-        <h2 className="mb-3 text-sm font-medium text-ink-soft">Workout</h2>
-        {workoutsError && (
-           <div className="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-             Failed to load workouts: {workoutsError}
-           </div>
-        )}
-        {todaysWorkout ? (
-          <div className="rounded-[var(--radius-lg)] border border-line bg-surface p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Dumbbell className="h-4 w-4 text-primary" />
-                  <span className="font-display text-lg font-medium text-ink">
-                    {todaysWorkout.title}
+        {/* Steps */}
+        <div className="min-w-[140px] rounded-[16px] bg-surface border border-line p-4 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+             <div className="w-6 h-6 rounded-full bg-primary-soft flex items-center justify-center text-primary">
+               <Footprints className="w-3.5 h-3.5" />
+             </div>
+             <span className="text-[13px] font-medium text-ink">Steps</span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="font-display font-bold text-[20px] text-ink">{steps.toLocaleString()}</span>
+          </div>
+          <div className="h-1.5 w-full bg-line rounded-full overflow-hidden mb-2">
+             <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (steps / stepsTarget) * 100)}%` }} />
+          </div>
+          <span className="text-[11px] text-ink-soft">Goal: {stepsTarget.toLocaleString()}</span>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 4. Today's Workout Card */}
+        <section className="rounded-[20px] bg-surface border border-line p-5 relative overflow-hidden flex flex-col justify-between min-h-[180px]">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Dumbbell className="w-4 h-4 text-primary" />
+              <span className="text-[13px] font-bold text-ink">Today&apos;s workout</span>
+            </div>
+            {todaysWorkout ? (
+              <>
+                <h3 className="font-display text-[22px] font-bold text-ink leading-tight mb-2">
+                  {todaysWorkout.title || "Custom Workout"}
+                </h3>
+                <p className="text-[13px] text-ink-soft mb-4">
+                  {todaysWorkout.exercises.length} exercises
+                </p>
+                {/* Visual support tags */}
+                <div className="flex gap-2 flex-wrap mb-4 relative z-10">
+                  <span className="bg-paper border border-line text-ink-soft text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md">
+                    Strength
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted">
-                  ~{todaysWorkout.estimatedMinutes} min · {todaysWorkout.exercises.length} exercises
+              </>
+            ) : (
+              <>
+                <h3 className="font-display text-[22px] font-bold text-ink leading-tight mb-2 text-ink-soft">
+                  Rest day
+                </h3>
+                <p className="text-[13px] text-ink-soft mb-4">
+                  No workout scheduled
                 </p>
-              </div>
-              <Badge variant={todaysWorkout.status === "completed" ? "default" : "muted"}>
-                {statusLabel(todaysWorkout.status)}
-              </Badge>
-            </div>
-            <ul className="mt-4 space-y-1.5 text-sm text-ink-soft">
-              {todaysWorkout.exercises.slice(0, 3).map((we) => {
-                const ex = getExerciseById(we.exerciseId);
-                return (
-                  <li key={we.id}>
-                    {ex?.name} · {we.plannedSets.length}×{we.plannedSets[0]?.targetRepsLow}-
-                    {we.plannedSets[0]?.targetRepsHigh}
-                  </li>
-                );
-              })}
-              {todaysWorkout.exercises.length > 3 && (
-                <li className="text-muted">+{todaysWorkout.exercises.length - 3} more</li>
-              )}
-            </ul>
-            {todaysWorkout.status !== "completed" && (
-              <Button
-                className="mt-4 w-full"
-                onClick={() => router.push(`/workout/${todaysWorkout.id}`)}
-              >
-                {todaysWorkout.status === "in_progress" ? "Resume workout" : "Start workout"}
-              </Button>
+              </>
             )}
           </div>
-        ) : (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-line-strong p-5 text-center">
-            <p className="text-sm text-ink-soft">No workout planned yet today.</p>
-            <Button variant="secondary" size="sm" className="mt-3" onClick={() => router.push("/ai")}>
-              Ask AI for today&apos;s workout
-            </Button>
+          
+          <div className="w-full relative z-10">
+            {todaysWorkout ? (
+              <Link 
+                href={`/workout/${todaysWorkout.id}`}
+                className="w-full flex items-center justify-center bg-[#335f42] hover:bg-[#254530] text-white rounded-[12px] h-11 font-medium transition-colors"
+              >
+                Start workout
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
+            ) : (
+              <Link 
+                href="/ai"
+                className="w-full flex items-center justify-center bg-[#335f42] hover:bg-[#254530] text-white rounded-[12px] h-11 font-medium transition-colors"
+              >
+                Plan a workout
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
+            )}
           </div>
-        )}
+
+          {/* Decorative illustration placeholder */}
+          <div className="absolute -right-4 bottom-12 opacity-20 pointer-events-none">
+            <Dumbbell className="w-32 h-32 text-primary" />
+          </div>
+        </section>
+
+        {/* 5. Meals Today Card */}
+        <section className="rounded-[20px] bg-[#fbfaf8] border border-[#f0eee9] p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <UtensilsCrossed className="w-4 h-4 text-orange-500" />
+            <span className="text-[13px] font-bold text-ink">Meals today</span>
+          </div>
+
+          <div className="space-y-4">
+            {["breakfast", "lunch", "dinner"].map((mealType) => {
+              const loggedMeal = todaysMeals.find((m) => m.mealType === mealType);
+              
+              let Icon = Sun;
+              if (mealType === "breakfast") Icon = Sun; // sunrise equivalent
+              if (mealType === "lunch") Icon = Sun;
+              if (mealType === "dinner") Icon = Moon;
+
+              return (
+                <div key={mealType} className="flex justify-between items-start">
+                   <div className="flex gap-3">
+                     <Icon className={cn("w-4 h-4 mt-0.5", loggedMeal ? "text-orange-400" : "text-ink-soft/40")} />
+                     <div>
+                       <span className="block font-bold text-[14px] text-ink capitalize mb-0.5">{mealType}</span>
+                       <span className="block text-[12px] text-ink-soft line-clamp-1 max-w-[160px]">
+                         {loggedMeal 
+                           ? loggedMeal.items.map(i => i.name).join(", ") 
+                           : `Plan your ${mealType}`}
+                       </span>
+                     </div>
+                   </div>
+                   {loggedMeal ? (
+                     <div className="flex items-center gap-1 text-primary">
+                       <Check className="w-3.5 h-3.5" />
+                       <span className="text-[11px] font-medium">Logged</span>
+                     </div>
+                   ) : (
+                     <Link href="/ai" className="flex items-center gap-1 text-orange-500 hover:text-orange-600 transition-colors">
+                       <span className="text-[11px] font-medium">Plan now</span>
+                       <ChevronRight className="w-3.5 h-3.5" />
+                     </Link>
+                   )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
-      <Button
-        variant="outline"
-        className="mt-8 w-full"
-        onClick={() => router.push("/ai")}
-      >
-        <MessageCircle className="h-4 w-4" /> Ask AI about today
-      </Button>
+      {/* 6. Coach Insight Card */}
+      <section className="rounded-[20px] bg-primary-soft/40 border border-primary/20 p-5 flex items-start gap-4">
+         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm text-primary">
+           <Sparkles className="w-5 h-5" />
+         </div>
+         <div className="flex-1">
+           <span className="block text-[12px] text-ink-soft mb-1 font-medium">Coach insight</span>
+           {summary.proteinG < (targets.proteinG || 120) * 0.5 && hour >= 14 ? (
+             <>
+               <span className="block font-bold text-[14px] text-ink mb-1">Your protein intake is a bit low today.</span>
+               <span className="block text-[13px] text-ink-soft">Try adding a high-protein option at dinner to stay on track.</span>
+             </>
+           ) : summary.kcal < (targets.kcal || 2000) * 0.3 && hour >= 12 ? (
+             <>
+               <span className="block font-bold text-[14px] text-ink mb-1">You&apos;re running low on calories.</span>
+               <span className="block text-[13px] text-ink-soft">Make sure to have a balanced meal to keep your energy up.</span>
+             </>
+           ) : (
+             <>
+               <span className="block font-bold text-[14px] text-ink mb-1">You&apos;re doing great today!</span>
+               <span className="block text-[13px] text-ink-soft">Keep sticking to your plan. Consistency is key to building a healthier you.</span>
+             </>
+           )}
+         </div>
+      </section>
 
-      <div className="h-4" />
+      {/* 7. Quick Actions */}
+      <section>
+        <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Quick actions</h2>
+        <div className="flex gap-2">
+          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+            <Camera className="w-4 h-4 mr-2 text-primary" />
+            Scan meal
+          </Link>
+          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+            <CalendarPlus className="w-4 h-4 mr-2 text-primary" />
+            Plan workout
+          </Link>
+          <Link href="/ai" className="flex-1 flex items-center justify-center rounded-[12px] h-12 bg-surface text-[14px] font-medium text-ink hover:bg-line-soft border border-line shadow-sm transition-colors">
+            <MessageCircle className="w-4 h-4 mr-2 text-primary" />
+            Ask coach
+          </Link>
+        </div>
+      </section>
+
     </div>
   );
-}
-
-function EmptyToday() {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-dashed border-line-strong p-6 text-center">
-      <p className="text-sm text-ink-soft">Nothing logged yet. Snap a photo of your next meal and I&apos;ll take it from there.</p>
-    </div>
-  );
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function statusLabel(s: string) {
-  if (s === "in_progress") return "In progress";
-  if (s === "completed") return "Completed";
-  if (s === "skipped") return "Skipped";
-  return "Not started";
 }
