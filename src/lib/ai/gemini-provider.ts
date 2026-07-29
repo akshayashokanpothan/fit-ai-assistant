@@ -57,6 +57,7 @@ const SUPPORTED_MIME_TYPES = new Set([
   "image/png",
   "image/gif",
   "image/webp",
+  "image/avif",
 ]);
 
 // Detect whether this is a screenshot-analysis call (vs meal photo) by
