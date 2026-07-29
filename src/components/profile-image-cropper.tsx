@@ -57,17 +57,24 @@ export function ProfileImageCropper({
 
   const content = (
     <div 
-      className="fixed inset-0 z-[100] flex flex-col bg-background"
+      className="fixed inset-0 z-[9999] flex flex-col bg-black/85 backdrop-blur-sm text-white"
       style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-background z-10 shrink-0">
-        <Button variant="ghost" size="icon" onClick={onCancel} disabled={isProcessing}>
+      <div className="flex items-center justify-between px-4 py-4 shrink-0">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="rounded-full bg-transparent border-white/20 text-white hover:bg-white/10 hover:text-white" 
+          onClick={onCancel} 
+          disabled={isProcessing}
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-lg font-semibold text-ink">Crop your photo</h2>
+        <div className="flex flex-col items-center justify-center">
+          <h2 className="text-lg font-semibold text-white">Crop your photo</h2>
+        </div>
         <Button 
-          variant="ghost" 
-          className="font-semibold text-primary px-2" 
+          className="rounded-full bg-primary text-primary-foreground font-medium px-6 hover:bg-primary/90" 
           onClick={handleSave} 
           disabled={isProcessing}
         >
@@ -75,7 +82,7 @@ export function ProfileImageCropper({
         </Button>
       </div>
       
-      <div className="relative flex-1 bg-black/95">
+      <div className="relative flex-1 w-full">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -86,11 +93,14 @@ export function ProfileImageCropper({
           onCropChange={setCrop}
           onCropComplete={handleCropComplete}
           onZoomChange={setZoom}
+          style={{
+            containerStyle: { background: 'transparent' },
+          }}
         />
       </div>
       
-      <div className="flex items-center justify-center py-6 bg-background shrink-0">
-        <p className="text-sm text-ink-soft">
+      <div className="flex items-center justify-center py-8 shrink-0">
+        <p className="text-sm text-white/70">
           Drag to reposition • Pinch to zoom
         </p>
       </div>
