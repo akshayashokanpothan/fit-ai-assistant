@@ -188,7 +188,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-28 relative">
+    <div className="px-5 pt-6 pb-10 relative">
       <div className="mb-8">
         <h1 className="font-display text-[28px] font-bold text-ink tracking-tight">Profile</h1>
         <p className="mt-1 text-[13px] text-ink-soft max-w-[280px]">
@@ -420,30 +420,30 @@ export default function ProfilePage() {
         </div>
       </Section>
 
-      <div className="mt-12 space-y-6">
+      <div className="mt-10 space-y-8">
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Account & Plan</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Account & Plan</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<Crown className="w-5 h-5" />} title="Usage & plan" description="Free plan • Upgrade anytime" />
            </div>
          </div>
 
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Privacy & Data</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Privacy & Data</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<ShieldCheck className="w-5 h-5" />} title="Privacy & data" description="View how your data is used" />
            </div>
          </div>
 
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Preferences</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Preferences</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<Bell className="w-5 h-5" />} title="Notifications" description="Manage alerts & reminders" />
            </div>
          </div>
 
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Healthcare Connections</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Healthcare Connections</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<Stethoscope className="w-5 h-5" />} title="Connect Physician" badge="Coming Soon" />
              <ActionRow icon={<HeartPulse className="w-5 h-5" />} title="Connect Dietician" badge="Coming Soon" />
@@ -451,17 +451,17 @@ export default function ProfilePage() {
          </div>
 
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Support</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Support</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<HelpCircle className="w-5 h-5" />} title="Pace Support" description="Help centre & contact" />
            </div>
          </div>
 
          <div>
-           <h2 className="text-[14px] font-bold text-ink mb-3 px-1">Data Management</h2>
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Data Management</h2>
            <div className="rounded-[20px] border border-line overflow-hidden">
              <ActionRow icon={<Download className="w-5 h-5" />} title="Export my data" description="Download your health data" />
-             <ActionRow icon={<RotateCcw className="w-5 h-5" />} title="Reset demo data" description="Clear all saved information (Demo only)" onClick={() => setConfirmReset(true)} />
+             <ActionRow icon={<RotateCcw className="w-5 h-5" />} title="Reset my data" description="Clear all saved information and history" onClick={() => setConfirmReset(true)} />
            </div>
            
            {confirmReset && (
@@ -482,9 +482,9 @@ export default function ProfilePage() {
          </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-paper via-paper to-transparent px-5 pb-6 pt-12 md:max-w-[440px] md:mx-auto md:left-auto md:right-auto md:w-full">
+      <div className="mt-8 mb-4">
         <Button 
-          className="w-full rounded-[16px] h-[52px] bg-[#114220] hover:bg-[#0c3117] text-white font-medium text-[15px] shadow-lg shadow-[#114220]/20" 
+          className="w-full rounded-[16px] h-[52px] bg-[#114220] hover:bg-[#0c3117] text-white font-medium text-[15px]"
           onClick={save} 
           disabled={saving}
         >
