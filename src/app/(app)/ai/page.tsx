@@ -20,9 +20,9 @@ import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
 import { PwaEngagementModal, PwaToasts } from "@/components/pwa-modals";
-import { Camera, Send, TriangleAlert, X, Image as ImageIcon } from "lucide-react";
+import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Workout, Plan, AIContext, Profile } from "@/types";
+import type { Workout, Plan, AIContext, Profile, Meal, Activity } from "@/types";
 
 const WELCOME_MESSAGE_ID = "msg-welcome";
 
@@ -33,11 +33,45 @@ const WELCOME_MESSAGE_ID = "msg-welcome";
  * demo store; only the displayed text for this one known message is
  * computed dynamically.
  */
-function greetingContent(profile: Profile | null): string {
+function greetingContent(
+  profile: Profile | null,
+  meals: Meal[],
+  workouts: Workout[],
+  activities: Activity[]
+): string {
   const name = profile?.displayName?.trim();
-  const base =
-    "I've got today's breakfast and lunch logged, plus your step count. Want to plan today's workout, or check in on how the day's going?";
-  return name ? `Good to see you, ${name}. ${base}` : `Good to see you. ${base}`;
+  const today = new Date().toISOString().slice(0, 10);
+  
+  const todaysMeals = meals.filter(m => m.eventTime && m.eventTime.startsWith(today) && m.confirmationState === 'confirmed');
+  const todaysWorkouts = workouts.filter(w => w.scheduledFor === today);
+  const todaysActivities = activities.filter(a => a.eventDate === today);
+
+  const hasMeals = todaysMeals.length > 0;
+  const hasWorkouts = todaysWorkouts.length > 0;
+  const hasSteps = todaysActivities.some(a => a.steps && a.steps > 0);
+
+  const greeting = name ? `Good to see you, ${name}.` : `Good to see you.`;
+
+  if (!hasMeals && !hasWorkouts && !hasSteps) {
+    return `${greeting} Ready to crush your goals today? You can log a meal, plan a workout, or ask me anything.`;
+  }
+
+  const parts = [];
+  if (hasMeals) parts.push(`I've got your meals logged`);
+  if (hasSteps) parts.push(`tracked your steps`);
+  
+  let base = "";
+  if (parts.length > 0) {
+    base = `${parts.join(' and ')}. `;
+  }
+  
+  if (hasWorkouts) {
+    base += "Your workout for today is set. Ready to get started?";
+  } else {
+    base += "Want to plan today's workout, or check in on how the day's going?";
+  }
+
+  return `${greeting} ${base}`;
 }
 
 interface PendingImage {
@@ -129,7 +163,7 @@ export default function AIPage() {
         .slice(-10)
         .map((m) => ({ 
           role: m.role as "user" | "assistant", 
-          content: m.id === WELCOME_MESSAGE_ID ? greetingContent(profile) : m.content 
+          content: m.id === WELCOME_MESSAGE_ID ? greetingContent(profile, meals, workouts, activities) : m.content 
         }))
         .filter((m) => m.content.trim().length > 0);
 
@@ -275,22 +309,43 @@ export default function AIPage() {
     <div className="flex h-[calc(100vh-120px)] flex-col">
       <div className="flex-1 overflow-y-auto px-4 pt-5">
         <div className="space-y-5 pb-4">
-          {messages.map((m) => {
-            const displayMessage =
-              m.id === WELCOME_MESSAGE_ID ? { ...m, content: greetingContent(profile) } : m;
-            return (
-              <MessageBubble
-                key={m.id}
-                message={displayMessage}
-                onConfirmMeal={async (items, mealType, mediaUploadId) => {
-                  await confirmMeal(mealType, items, "image_ai", mediaUploadId);
-                }}
-                onConfirmActivity={(draft) => {
-                  confirmActivity(draft, "screenshot_ai");
-                }}
-              />
-            );
-          })}
+          {messages.length === 1 && messages[0].id === WELCOME_MESSAGE_ID ? (
+            <div className="flex flex-col items-center pt-8 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center mb-5 shadow-sm border border-line-strong overflow-hidden relative">
+                 <div className="absolute inset-0 bg-primary/5" />
+                 <Sparkles className="w-8 h-8 text-primary relative z-10" />
+              </div>
+              
+              <h2 className="text-[22px] font-bold text-ink mb-3 text-center tracking-tight px-4">
+                {greetingContent(profile, meals, workouts, activities).split('. ')[0] + '.'}
+              </h2>
+              
+              <p className="text-[15px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
+                {greetingContent(profile, meals, workouts, activities).split('. ').slice(1).join('. ')}
+              </p>
+              
+              <div className="w-full">
+                <QuickActions onPick={onQuickAction} variant="empty" />
+              </div>
+            </div>
+          ) : (
+            messages.map((m) => {
+              const displayMessage =
+                m.id === WELCOME_MESSAGE_ID ? { ...m, content: greetingContent(profile, meals, workouts, activities) } : m;
+              return (
+                <MessageBubble
+                  key={m.id}
+                  message={displayMessage}
+                  onConfirmMeal={async (items, mealType, mediaUploadId) => {
+                    await confirmMeal(mealType, items, "image_ai", mediaUploadId);
+                  }}
+                  onConfirmActivity={(draft) => {
+                    confirmActivity(draft, "screenshot_ai");
+                  }}
+                />
+              );
+            })
+          )}
 
           {/* History hydration loading state — shown only while the initial
               Supabase fetch is in-flight after a refresh. Fades once resolved. */}
@@ -347,9 +402,12 @@ export default function AIPage() {
           </div>
         )}
 
-        <div className="mb-3">
-          <QuickActions onPick={onQuickAction} />
-        </div>
+        {/* Only show bottom pills if we're not in the empty state */}
+        {(messages.length > 1 || (messages.length === 1 && messages[0].id !== WELCOME_MESSAGE_ID)) && (
+          <div className="mb-3">
+            <QuickActions onPick={onQuickAction} variant="active" />
+          </div>
+        )}
 
         <div className="flex items-end gap-2 pb-3 relative">
           <input
@@ -506,20 +564,29 @@ function MessageBubble({
         {message.status === "sending" ? (
           <TypingIndicator />
         ) : message.content ? (
-          <div
-            className={cn(
-              "rounded-[var(--radius-md)] px-4 py-2.5 text-[15px] leading-relaxed",
-              isUser ? "bg-primary text-primary-ink" : "bg-surface border border-line text-ink",
-              message.card?.kind === "safety_notice" && "border-danger-soft bg-danger-soft text-ink"
-            )}
-          >
-            {message.card?.kind === "safety_notice" && (
-              <div className="mb-1.5 flex items-center gap-1.5 text-danger">
-                <TriangleAlert className="h-4 w-4" />
-                <span className="text-xs font-medium">Please read this</span>
+          <div className={cn("flex", isUser ? "justify-end" : "justify-start mb-4")}>
+            {!isUser && (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary mr-3 shadow-sm border border-primary/20 mt-1">
+                <Sparkles className="h-4 w-4" />
               </div>
             )}
-            {message.content}
+            <div
+              className={cn(
+                "rounded-[20px] px-4 py-3 text-[15px] leading-relaxed",
+                isUser 
+                  ? "bg-primary text-primary-ink rounded-tr-sm shadow-sm" 
+                  : "bg-surface border border-line-strong text-ink rounded-tl-sm shadow-sm",
+                message.card?.kind === "safety_notice" && "border-danger-soft bg-danger-soft text-ink"
+              )}
+            >
+              {message.card?.kind === "safety_notice" && (
+                <div className="mb-2 flex items-center gap-1.5 text-danger font-medium">
+                  <TriangleAlert className="h-4 w-4" />
+                  <span className="text-[13px]">Please read this</span>
+                </div>
+              )}
+              {message.content}
+            </div>
           </div>
         ) : null}
 
@@ -565,10 +632,18 @@ function MessageBubble({
 
 function TypingIndicator() {
   return (
-    <div className="flex items-center gap-1 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-3">
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.2s]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.1s]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
+    <div className="flex justify-start mb-4">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary mr-3 shadow-sm border border-primary/20 mt-1">
+        <Sparkles className="h-4 w-4 animate-pulse" />
+      </div>
+      <div className="flex items-center gap-3 rounded-[20px] rounded-tl-sm border border-line-strong bg-surface px-4 py-3 shadow-sm">
+        <span className="text-[14px] text-ink-soft font-medium animate-pulse">Coach is thinking</span>
+        <div className="flex gap-1">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-soft [animation-delay:-0.2s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-soft [animation-delay:-0.1s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-soft" />
+        </div>
+      </div>
     </div>
   );
 }
