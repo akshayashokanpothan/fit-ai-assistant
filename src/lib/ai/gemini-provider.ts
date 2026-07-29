@@ -64,12 +64,12 @@ const SUPPORTED_MIME_TYPES = new Set([
 // checking for the sentinel phrase the route already embeds in the instruction.
 const SCREENSHOT_INSTRUCTION_SIGNAL = "fitness screenshot";
 
-export function createGeminiProvider(): AIProvider {
-  const apiKey = process.env.GEMINI_API_KEY;
+export function createGeminiProvider(env: "PROD" | "DEV" = "PROD"): AIProvider {
+  const apiKey = process.env[`GEMINI_API_KEY_${env}`];
 
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY environment variable is not set. Please configure it in your server environment."
+      `GEMINI_API_KEY_${env} environment variable is not set. Please configure it in your server environment.`
     );
   }
 

@@ -11,7 +11,6 @@ import { createMockProvider } from "./mock-provider";
 import { createAnthropicProvider } from "./anthropic-provider";
 import { createGeminiProvider } from "./gemini-provider";
 import { createOpenAIProvider } from "./openai-provider";
-import { createOllamaProvider } from "./ollama-provider";
 
 export * from "./types";
 
@@ -23,12 +22,12 @@ let cached: AIProvider | null = null;
  * remains resilient and routes the request to gpt-4o-mini instead.
  * Vision and structured outputs do not currently have fallback targets.
  */
-function createResilientGeminiProvider(): AIProvider {
-  const primary = createGeminiProvider();
+function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
+  const primary = createGeminiProvider(env);
   let fallback: AIProvider | null = null;
 
   try {
-    fallback = createOpenAIProvider();
+    fallback = createOpenAIProvider(env);
   } catch {
     console.warn(
       "[AI Resilience] OpenAI fallback is not fully configured (missing API key). Fallback will not be possible."
@@ -72,7 +71,6 @@ function createResilientGeminiProvider(): AIProvider {
 /**
  * Provider factory. Selection is environment-based:
  *  - AI_PROVIDER=gemini -> Gemini (Primary) with OpenAI (Fallback)
- *  - AI_PROVIDER=ollama -> Local Ollama provider
  *  - AI_PROVIDER=anthropic (+ ANTHROPIC_API_KEY) -> real Anthropic adapter
  *  - anything else / missing credentials -> deterministic mock
  *
@@ -82,12 +80,11 @@ function createResilientGeminiProvider(): AIProvider {
 export function getAIProvider(): AIProvider {
   if (cached) return cached;
 
-  const requested = process.env.AI_PROVIDER ?? "mock";
+  const env = process.env.APP_ENV === "development" ? "DEV" : "PROD";
+  const requested = process.env.AI_PROVIDER ?? "gemini";
 
   if (requested === "gemini") {
-    cached = createResilientGeminiProvider();
-  } else if (requested === "ollama") {
-    cached = createOllamaProvider();
+    cached = createResilientGeminiProvider(env);
   } else if (requested === "anthropic" && process.env.ANTHROPIC_API_KEY) {
     cached = createAnthropicProvider();
   } else {

@@ -11,12 +11,12 @@ import type {
 
 const DEFAULT_MODEL = "gpt-4o-mini";
 
-export function createOpenAIProvider(): AIProvider {
-  const apiKey = process.env.OPENAI_API_KEY;
+export function createOpenAIProvider(env: "PROD" | "DEV" = "PROD"): AIProvider {
+  const apiKey = process.env[`OPENAI_API_KEY_${env}`];
 
   if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY environment variable is not set. Please configure it in your server environment."
+      `OPENAI_API_KEY_${env} environment variable is not set. Please configure it in your server environment.`
     );
   }
 

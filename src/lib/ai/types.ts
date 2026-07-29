@@ -35,7 +35,7 @@ export interface AnalyzeImageOutput {
  * only ever depend on this interface — never on a vendor SDK directly.
  */
 export interface AIProvider {
-  id: "mock" | "anthropic" | "openai" | "gemini" | "ollama";
+  id: "mock" | "anthropic" | "openai" | "gemini";
   generateText(input: GenerateTextInput): Promise<GenerateTextOutput>;
   generateStructuredOutput<T = unknown>(
     input: GenerateStructuredInput<T>
