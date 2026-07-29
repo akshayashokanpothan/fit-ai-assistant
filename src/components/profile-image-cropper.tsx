@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import getCroppedImg from "@/lib/utils/cropImage";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 interface ProfileImageCropperProps {
   imageSrc: string;
@@ -22,6 +23,17 @@ export function ProfileImageCropper({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    // Lock body scroll while modal is active
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const handleCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -43,16 +55,27 @@ export function ProfileImageCropper({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">Crop your photo</h2>
+  const content = (
+    <div 
+      className="fixed inset-0 z-[100] flex flex-col bg-background"
+      style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-background z-10 shrink-0">
         <Button variant="ghost" size="icon" onClick={onCancel} disabled={isProcessing}>
-          <X className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h2 className="text-lg font-semibold text-ink">Crop your photo</h2>
+        <Button 
+          variant="ghost" 
+          className="font-semibold text-primary px-2" 
+          onClick={handleSave} 
+          disabled={isProcessing}
+        >
+          {isProcessing ? "Saving..." : "Save"}
         </Button>
       </div>
       
-      <div className="relative flex-1 bg-black/90">
+      <div className="relative flex-1 bg-black/95">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -66,39 +89,14 @@ export function ProfileImageCropper({
         />
       </div>
       
-      <div className="p-6 bg-background space-y-6">
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-muted font-medium">-</span>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-primary"
-          />
-          <span className="text-xs text-muted font-medium">+</span>
-        </div>
-        
-        <div className="flex gap-4">
-          <Button 
-            variant="outline" 
-            className="flex-1" 
-            onClick={onCancel}
-            disabled={isProcessing}
-          >
-            Cancel
-          </Button>
-          <Button 
-            className="flex-1" 
-            onClick={handleSave}
-            disabled={isProcessing}
-          >
-            {isProcessing ? "Saving..." : "Save"}
-          </Button>
-        </div>
+      <div className="flex items-center justify-center py-6 bg-background shrink-0">
+        <p className="text-sm text-ink-soft">
+          Drag to reposition • Pinch to zoom
+        </p>
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }
