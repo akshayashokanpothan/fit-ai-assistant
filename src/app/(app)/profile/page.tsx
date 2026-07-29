@@ -37,7 +37,8 @@ import {
   Info,
   HelpCircle,
   UserCircle2,
-  Utensils
+  Utensils,
+  Pencil
 } from "lucide-react";
 
 const GOALS: { value: Goal; label: string }[] = [
@@ -199,7 +200,20 @@ export default function ProfilePage() {
       {/* Identity Card */}
       <div className="mb-6 rounded-[20px] bg-surface p-5 border border-line flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Avatar src={state.profile.avatarUrl} size={64} className="border-2 border-paper shadow-sm" />
+          <div className="relative">
+            <Avatar src={state.profile.avatarUrl} size={64} className="border-2 border-paper shadow-sm" />
+            <button 
+              className={cn(
+                "absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-primary text-white shadow-sm transition-transform hover:scale-105 active:scale-95",
+                avatarBusy && "opacity-50 cursor-not-allowed"
+              )}
+              disabled={avatarBusy}
+              onClick={() => avatarInputRef.current?.click()}
+              aria-label="Change photo"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
           <div className="flex flex-col">
             <span className="font-bold text-ink text-[17px]">{form.displayName || user?.email?.split('@')[0] || "User"}</span>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -209,23 +223,6 @@ export default function ProfilePage() {
             <span className="text-[12px] text-ink-soft/70 mt-0.5">{user?.email}</span>
             {avatarError && <span className="text-[10px] text-danger mt-1">{avatarError}</span>}
           </div>
-        </div>
-        <div className="flex flex-col gap-2 shrink-0">
-          <button 
-            className="text-[12px] font-medium text-ink bg-paper px-3 py-1.5 rounded-full border border-line hover:bg-line-soft transition-colors"
-            disabled={avatarBusy}
-            onClick={() => avatarInputRef.current?.click()}
-          >
-            {avatarBusy ? "..." : "Change photo"}
-          </button>
-          {state.profile.avatarUrl && (
-            <button 
-              className="text-[12px] font-medium text-ink-soft hover:text-danger transition-colors text-center"
-              onClick={removeAvatar}
-            >
-              Remove
-            </button>
-          )}
         </div>
         <input
           ref={avatarInputRef}
@@ -303,29 +300,29 @@ export default function ProfilePage() {
              </div>
              <div>
                <span className="block text-[11px] text-ink-soft mb-1 font-medium">Height</span>
-               <div className="flex items-center">
+               <div className="flex items-baseline gap-1">
                  <input 
-                   className="w-full bg-transparent text-[15px] text-ink font-medium focus:outline-none" 
+                   className="w-[4ch] bg-transparent text-[15px] text-ink font-medium focus:outline-none" 
                    inputMode="numeric"
                    value={form.heightCm}
                    placeholder="--"
                    onChange={(e) => setForm((f) => ({ ...f, heightCm: e.target.value }))}
                  />
-                 <span className="text-[13px] text-ink-soft ml-1">cm</span>
+                 <span className="text-[13px] text-ink-soft">cm</span>
                </div>
              </div>
           </div>
           <div className="p-3">
              <span className="block text-[11px] text-ink-soft mb-1 font-medium">Current weight</span>
-             <div className="flex items-center">
+             <div className="flex items-baseline gap-1">
                  <input 
-                   className="w-full bg-transparent text-[15px] text-ink font-medium focus:outline-none" 
+                   className="w-[4ch] bg-transparent text-[15px] text-ink font-medium focus:outline-none" 
                    inputMode="decimal"
                    value={form.weightKg}
                    placeholder="--"
                    onChange={(e) => setForm((f) => ({ ...f, weightKg: e.target.value }))}
                  />
-                 <span className="text-[13px] text-ink-soft ml-1">kg</span>
+                 <span className="text-[13px] text-ink-soft">kg</span>
              </div>
           </div>
         </div>
