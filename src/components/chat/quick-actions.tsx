@@ -38,8 +38,8 @@ const PROMPTS: Action[] = [
     icon: Calendar, 
     colorClass: "bg-purple-500/10",
     iconClass: "text-purple-500",
-    activeIcon: Leaf,
-    activeText: "What should I eat?"
+    activeIcon: Calendar,
+    activeText: "Meal plan"
   },
   { 
     text: "Check my progress", 
@@ -48,7 +48,7 @@ const PROMPTS: Action[] = [
     colorClass: "bg-slate-500/10",
     iconClass: "text-slate-500",
     activeIcon: BarChart3,
-    activeText: "Check progress"
+    activeText: "My progress"
   },
 ];
 
@@ -61,26 +61,28 @@ export function QuickActions({
 }) {
   if (variant === "empty") {
     return (
-      <div className="flex flex-col gap-3 w-full mt-2 px-1">
-        {PROMPTS.map((p) => {
-          const Icon = p.icon;
-          return (
-            <button
-              key={p.text}
-              onClick={() => onPick(p.text)}
-              className="flex items-center gap-4 rounded-[24px] border border-line bg-surface p-4 text-left shadow-sm transition-colors hover:border-line-strong active:bg-paper w-full group"
-            >
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${p.colorClass} ${p.iconClass}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col flex-1">
-                <span className="text-[15px] font-bold text-ink">{p.text}</span>
-                <span className="text-[13px] text-ink-soft pr-2 leading-snug mt-0.5">{p.desc}</span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted group-hover:text-ink-soft shrink-0" />
-            </button>
-          )
-        })}
+      <div className="w-full mt-2">
+        <div className="flex items-center justify-between px-1 mb-3">
+          <span className="text-[13px] font-semibold text-ink-soft">Quick actions</span>
+          <span className="text-[13px] text-[#335f42] font-medium flex items-center gap-1">Swipe &rarr;</span>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-4 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {PROMPTS.map((p) => {
+            const Icon = p.icon;
+            return (
+              <button
+                key={p.text}
+                onClick={() => onPick(p.text)}
+                className="flex items-center gap-2.5 shrink-0 whitespace-nowrap rounded-full border border-line bg-surface p-1.5 pr-4 text-[14px] font-medium text-ink hover:border-line-strong active:scale-[0.98] transition-all shadow-sm group"
+              >
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${p.colorClass} ${p.iconClass} group-hover:scale-105 transition-transform`}>
+                  <Icon className="h-[18px] w-[18px]" />
+                </div>
+                {p.activeText}
+              </button>
+            )
+          })}
+        </div>
       </div>
     );
   }

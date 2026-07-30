@@ -374,26 +374,33 @@ export default function AIPage() {
       <div className="flex-1 overflow-y-auto px-4 pt-16 hide-scrollbar">
         <div className="space-y-5 pb-4">
           {messages.length === 1 && messages[0].id === WELCOME_MESSAGE_ID ? (
-            <div className="flex flex-col items-center pt-6 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="w-20 h-20 bg-[#f7eedc] rounded-full flex items-center justify-center mb-5 shadow-sm overflow-hidden relative">
-                 <Bot className="w-10 h-10 text-[#335f42] relative z-10" />
-                 <Sparkles className="w-4 h-4 text-orange-400 absolute top-4 right-4" />
-              </div>
-              
-              <h2 className="text-[26px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif" dangerouslySetInnerHTML={{__html: greetingContent(profile, meals, workouts, activities).title.replace(',', ',<br />')}}>
+            <div className="flex flex-col pt-6 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-[28px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif" dangerouslySetInnerHTML={{__html: greetingContent(profile, meals, workouts, activities).title.replace(',', ',<br />')}}>
               </h2>
               
-              <p className="text-[14px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
+              <p className="text-[15px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
                 {greetingContent(profile, meals, workouts, activities).subtitle}
               </p>
+
+              <div className="flex items-start gap-3 px-1 mb-6">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f1f6f3]">
+                  <Sparkles className="h-5 w-5 text-[#335f42]" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <div className="rounded-[20px] rounded-tl-sm border border-line bg-surface p-4 shadow-sm">
+                    <p className="text-[15px] text-ink leading-relaxed">
+                      <span className="font-bold block mb-0.5">I'm your AI fitness coach.</span>
+                      What would you like to do today?
+                    </p>
+                  </div>
+                  <span className="text-[12px] text-ink-soft/70 mt-2 ml-1">
+                    {format(new Date(), "h:mm a")}
+                  </span>
+                </div>
+              </div>
               
               <div className="w-full">
                 <QuickActions onPick={onQuickAction} variant="empty" />
-              </div>
-
-              <div className="mt-6 flex items-center justify-center gap-1.5 text-muted">
-                <Lock className="h-3 w-3" />
-                <span className="text-[11px]">Your data is private and secure</span>
               </div>
             </div>
           ) : (
