@@ -5,6 +5,7 @@ import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { BodyMetric } from "@/types";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import Link from "next/link";
 
 interface WeightProgressChartProps {
   metrics: BodyMetric[];
@@ -94,8 +95,12 @@ export function WeightProgressChart({ metrics }: WeightProgressChartProps) {
       </div>
 
       {!hasData ? (
-        <div className="h-[160px] flex items-center justify-center rounded-[12px] bg-paper">
-          <span className="text-[13px] text-ink-soft font-medium">No weight data available</span>
+        <div className="flex flex-col items-center justify-center rounded-[12px] bg-paper py-8 px-4 text-center">
+          <span className="text-[14px] font-bold text-ink mb-1">Track your weight journey</span>
+          <span className="text-[13px] text-ink-soft mb-4">Log your first weight entry to see your progress here.</span>
+          <Link href="/profile" className="rounded-full bg-[#335f42] px-4 py-2 text-[13px] font-medium text-white shadow-sm hover:bg-[#284a33]">
+            Update weight
+          </Link>
         </div>
       ) : (
         <div className="relative w-full overflow-visible">

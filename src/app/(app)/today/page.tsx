@@ -112,7 +112,8 @@ export default function TodayPage() {
       </section>
 
       {/* 3. Daily Metrics (Horizontal Scroll) */}
-      <section className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-5 px-5">
+      {(summary.kcal > 0 || steps > 0) && (
+        <section className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-5 px-5">
         {/* Calories */}
         <div className="min-w-[140px] rounded-[16px] bg-surface border border-line p-4 flex-shrink-0">
           <div className="flex items-center gap-2 mb-3">
@@ -188,6 +189,7 @@ export default function TodayPage() {
         {/* Spacer for proper right padding on scroll */}
         <div className="w-1 flex-shrink-0" aria-hidden="true" />
       </section>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 4. Today's Workout Card */}

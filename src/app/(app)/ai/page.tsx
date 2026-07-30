@@ -38,40 +38,32 @@ function greetingContent(
   meals: Meal[],
   workouts: Workout[],
   activities: Activity[]
-): string {
-  const name = profile?.displayName?.trim();
+): { title: string; subtitle: string } {
+  const name = profile?.displayName?.trim()?.split(" ")[0] || "";
   const today = new Date().toISOString().slice(0, 10);
   
   const todaysMeals = meals.filter(m => m.eventTime && m.eventTime.startsWith(today) && m.confirmationState === 'confirmed');
   const todaysWorkouts = workouts.filter(w => w.scheduledFor === today);
-  const todaysActivities = activities.filter(a => a.eventDate === today);
+  const todaysActivities = activities.filter(a => a.eventDate === today && a.confirmationState === 'confirmed');
 
   const hasMeals = todaysMeals.length > 0;
   const hasWorkouts = todaysWorkouts.length > 0;
   const hasSteps = todaysActivities.some(a => a.steps && a.steps > 0);
 
-  const greeting = name ? `Good to see you, ${name}.` : `Good to see you.`;
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  
+  const title = `${timeOfDay}${name ? `, ${name}` : ""} 👋`;
 
   if (!hasMeals && !hasWorkouts && !hasSteps) {
-    return `${greeting} Ready to crush your goals today? You can log a meal, plan a workout, or ask me anything.`;
+    return { title, subtitle: "Ready to start your fitness journey?" };
   }
 
-  const parts = [];
-  if (hasMeals) parts.push(`I've got your meals logged`);
-  if (hasSteps) parts.push(`tracked your steps`);
-  
-  let base = "";
-  if (parts.length > 0) {
-    base = `${parts.join(' and ')}. `;
-  }
-  
-  if (hasWorkouts) {
-    base += "Your workout for today is set. Ready to get started?";
-  } else {
-    base += "Want to plan today's workout, or check in on how the day's going?";
+  if (hasMeals && hasWorkouts && hasSteps) {
+    return { title, subtitle: "I've reviewed your progress today." };
   }
 
-  return `${greeting} ${base}`;
+  return { title, subtitle: "Let's continue building your progress today." };
 }
 
 interface PendingImage {
@@ -124,7 +116,7 @@ export default function AIPage() {
         id: `msg-${Date.now()}-profile-error`,
         conversationId: conversation?.id ?? "default",
         role: "assistant",
-        content: "I couldn't load your profile just now. Please refresh and try again.",
+        content: "Something went wrong. Please try again.",
         createdAt: new Date().toISOString(),
         status: "sent",
       });
@@ -161,12 +153,15 @@ export default function AIPage() {
       const history = messages
         .filter((m) => m.status !== "sending")
         .slice(-10)
-        .map((m) => ({ 
-          role: m.role as "user" | "assistant", 
-          content: m.id === WELCOME_MESSAGE_ID ? greetingContent(profile, meals, workouts, activities) : m.content 
-        }))
+        .map((m) => {
+          let content = m.content || "";
+          if (m.id === WELCOME_MESSAGE_ID) {
+            const greeting = greetingContent(profile, meals, workouts, activities);
+            content = `${greeting.title} ${greeting.subtitle}`;
+          }
+          return { role: m.role as "user" | "assistant", content };
+        })
         .filter((m) => m.content.trim().length > 0);
-
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -257,7 +252,7 @@ export default function AIPage() {
       id: thinkingId,
       conversationId: conversation?.id ?? "default",
       role: "assistant",
-      content: "",
+      content: kind === "meal" ? "Analyzing your meal..." : "Coach is thinking...",
       createdAt: new Date().toISOString(),
       status: "sending",
     });
@@ -297,7 +292,7 @@ export default function AIPage() {
       }
     } catch {
       updateMessage(thinkingId, {
-        content: "Something went wrong analyzing that image. Please try again.",
+        content: "Unable to analyze this image.",
         status: "failed",
       });
     } finally {
@@ -334,12 +329,11 @@ export default function AIPage() {
                  <Sparkles className="w-4 h-4 text-orange-400 absolute top-4 right-4" />
               </div>
               
-              <h2 className="text-[26px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif">
-                Good morning,<br />Akshay 👋
+              <h2 className="text-[26px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif" dangerouslySetInnerHTML={{__html: greetingContent(profile, meals, workouts, activities).title.replace(',', ',<br />')}}>
               </h2>
               
               <p className="text-[14px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
-                I&apos;m your fitness coach.<br />How can I help you today?
+                {greetingContent(profile, meals, workouts, activities).subtitle}
               </p>
               
               <div className="w-full">
@@ -354,7 +348,7 @@ export default function AIPage() {
           ) : (
             messages.map((m) => {
               const displayMessage =
-                m.id === WELCOME_MESSAGE_ID ? { ...m, content: greetingContent(profile, meals, workouts, activities) } : m;
+                m.id === WELCOME_MESSAGE_ID ? { ...m, content: `${greetingContent(profile, meals, workouts, activities).title}\n\n${greetingContent(profile, meals, workouts, activities).subtitle}` } : m;
               return (
                 <MessageBubble
                   key={m.id}
@@ -583,7 +577,7 @@ function MessageBubble({
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div className={cn("flex max-w-[85%] flex-col", isUser ? "items-end" : "items-start")}>
         {message.status === "sending" ? (
-          <TypingIndicator />
+          <TypingIndicator text={message.content || undefined} />
         ) : message.content || (message.attachments && message.attachments.length > 0) ? (
           <div className={cn("flex", isUser ? "justify-end" : "justify-start mb-4")}>
             {!isUser && (
@@ -623,7 +617,7 @@ function MessageBubble({
         ) : null}
 
         {message.status === "failed" && (
-          <span className="mt-1 text-xs text-danger">Failed to send</span>
+          <span className="mt-1 text-xs text-danger">Something went wrong. Please try again.</span>
         )}
 
         {message.card?.kind === "meal_review" && (
@@ -662,14 +656,14 @@ function MessageBubble({
   );
 }
 
-function TypingIndicator() {
+function TypingIndicator({ text = "Coach is thinking..." }: { text?: string }) {
   return (
     <div className="flex justify-start mb-4">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink mr-3 shadow-sm border border-line-strong mt-1">
         <Bot className="h-4 w-4 text-[#335f42] animate-pulse" />
       </div>
       <div className="flex items-center gap-3 rounded-[20px] rounded-tl-sm border border-line-strong bg-surface px-4 py-3 shadow-sm">
-        <span className="text-[14px] text-ink-soft font-medium animate-pulse">Coach is thinking</span>
+        <span className="text-[14px] text-ink-soft font-medium animate-pulse">{text}</span>
         <div className="flex gap-1">
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-soft [animation-delay:-0.2s]" />
           <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-soft [animation-delay:-0.1s]" />

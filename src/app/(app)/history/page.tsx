@@ -27,9 +27,9 @@ interface HistoryEntry {
 export default function HistoryPage() {
   const router = useRouter();
   const { bodyMetrics } = useBodyMetricsDAL();
-  const { workouts, error: workoutsError } = useWorkoutsDAL();
-  const { meals, error: mealsError } = useMealsDAL();
-  const { activities } = useActivitiesDAL();
+  const { workouts, error: workoutsError, loading: workoutsLoading } = useWorkoutsDAL();
+  const { meals, error: mealsError, loading: mealsLoading } = useMealsDAL();
+  const { activities, loading: activitiesLoading } = useActivitiesDAL();
   const [filter, setFilter] = useState<"all" | "meals" | "workouts" | "activity">("all");
 
   const entries = useMemo<HistoryEntry[]>(() => {
@@ -107,19 +107,21 @@ export default function HistoryPage() {
     Earlier: entries.filter((e) => e.group === "Earlier"),
   };
 
+  const isLoading = workoutsLoading || mealsLoading || activitiesLoading;
+
   return (
     <div className="px-5 pt-6">
       <h1 className="font-display text-[26px] font-medium text-ink">History</h1>
 
       {workoutsError && (
         <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-          Failed to load workouts: {workoutsError}
+          Check your connection and try again.
         </div>
       )}
 
       {mealsError && (
         <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-          Failed to load meals: {mealsError}
+          Check your connection and try again.
         </div>
       )}
 
@@ -170,11 +172,20 @@ export default function HistoryPage() {
           ) : null
         )}
 
-        {entries.length === 0 && (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-line-strong p-8 text-center">
-            <p className="text-sm text-ink-soft">Nothing here yet.</p>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 px-5">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-line-strong border-t-primary mb-4" />
+            <p className="text-[14px] text-ink-soft font-medium">Loading your progress...</p>
           </div>
-        )}
+        ) : entries.length === 0 ? (
+          <div className="rounded-[20px] bg-paper py-10 px-5 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-primary-soft text-primary flex items-center justify-center mb-4">
+              <Footprints className="w-6 h-6" />
+            </div>
+            <p className="text-[15px] font-bold text-ink mb-1">Your journey history will appear here.</p>
+            <p className="text-[13px] text-ink-soft max-w-[250px] mx-auto">Complete workouts and log meals to track your progress over time.</p>
+          </div>
+        ) : null}
       </div>
 
       <Button variant="outline" className="mt-8 w-full" onClick={() => router.push("/ai")}>

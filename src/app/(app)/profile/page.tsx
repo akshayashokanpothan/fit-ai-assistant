@@ -220,7 +220,7 @@ export default function ProfilePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               <span className="text-[12px] text-ink-soft font-medium">Active</span>
             </div>
-            <span className="text-[12px] text-ink-soft/70 mt-0.5">{user?.email}</span>
+            <span className="text-[12px] text-ink-soft/70 mt-0.5">{user?.email || "No email provided"}</span>
             {avatarError && <span className="text-[10px] text-danger mt-1">{avatarError}</span>}
           </div>
         </div>
@@ -463,7 +463,7 @@ export default function ProfilePage() {
            
            {confirmReset && (
               <div className="mt-3 p-4 bg-danger-soft border border-danger/20 rounded-[20px]">
-                 <p className="text-[12px] text-ink mb-3">This clears all local demo data. Cannot be undone.</p>
+                 <p className="text-[12px] text-ink mb-3">This clears all local data. Cannot be undone.</p>
                  <div className="flex gap-2">
                    <Button variant="danger" size="sm" className="flex-1" onClick={() => { resetDemo(); router.replace("/today"); }}>Confirm reset</Button>
                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => setConfirmReset(false)}>Cancel</Button>
