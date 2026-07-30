@@ -164,8 +164,17 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
 
   let path1 = "";
   let path1Started = false;
+  let path1PrevX = 0;
+  let path1PrevY = 0;
+
   let path2 = "";
   let path2Started = false;
+  let path2PrevX = 0;
+  let path2PrevY = 0;
+  
+  const validCount1 = data.filter(d => d.val1 !== null).length;
+  const validCount2 = data.filter(d => d.val2 !== null).length;
+  const isSparse = validCount1 <= 1 && validCount2 <= 1 && (validCount1 + validCount2) > 0;
   
   data.forEach((d, i) => {
     const x = getX(i);
@@ -175,8 +184,11 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
         path1 += `M ${x} ${y1}`;
         path1Started = true;
       } else {
-        path1 += ` L ${x} ${y1}`;
+        const cpX = path1PrevX + (x - path1PrevX) / 2;
+        path1 += ` C ${cpX} ${path1PrevY}, ${cpX} ${y1}, ${x} ${y1}`;
       }
+      path1PrevX = x;
+      path1PrevY = y1;
     } else {
       path1Started = false;
     }
@@ -187,8 +199,11 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
         path2 += `M ${x} ${y2}`;
         path2Started = true;
       } else {
-        path2 += ` L ${x} ${y2}`;
+        const cpX = path2PrevX + (x - path2PrevX) / 2;
+        path2 += ` C ${cpX} ${path2PrevY}, ${cpX} ${y2}, ${x} ${y2}`;
       }
+      path2PrevX = x;
+      path2PrevY = y2;
     } else {
       path2Started = false;
     }
@@ -199,8 +214,22 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
   return (
     <div className="rounded-[24px] bg-surface p-5 border border-line">
       <div className="flex flex-col gap-1 mb-6">
-        <h2 className="text-[16px] font-bold text-ink">Your Progress</h2>
-        <p className="text-[13px] text-ink-soft mb-2">Compared with your daily goals</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-[16px] font-bold text-ink">Your Progress</h2>
+            <p className="text-[13px] text-ink-soft mb-2">Compared with your daily goals</p>
+          </div>
+          <div className="flex flex-col gap-1 items-end mt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-ink-soft font-medium">Logged data</span>
+              <div className="w-4 h-[2px] bg-ink-soft rounded-full" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-ink-soft font-medium">Daily target</span>
+              <div className="w-4 border-t-2 border-dashed border-ink-soft" />
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-3 w-full mt-2">
           <div className="flex items-center gap-2 flex-1 rounded-full border border-line px-3 py-1.5 bg-paper">
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m1Config.color }} />
@@ -302,25 +331,27 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
             <div key={i} className="absolute inset-0 pointer-events-none z-20">
               {point.val1 !== null && (
                 <div 
-                  className="absolute bg-white rounded-full shadow-sm"
+                  className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
                   style={{
                     left: xPct,
                     top: `${getY1(point.val1)}px`,
                     width: '8px', height: '8px',
                     border: `2px solid ${m1Config.color}`,
                     transform: 'translate(-50%, -50%)',
+                    boxShadow: isSparse ? `0 0 0 4px ${m1Config.color}33` : undefined,
                   }}
                 />
               )}
               {point.val2 !== null && (
                 <div 
-                  className="absolute bg-white rounded-full shadow-sm"
+                  className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
                   style={{
                     left: xPct,
                     top: `${getY2(point.val2)}px`,
                     width: '8px', height: '8px',
                     border: `2px solid ${m2Config.color}`,
                     transform: 'translate(-50%, -50%)',
+                    boxShadow: isSparse ? `0 0 0 4px ${m2Config.color}33` : undefined,
                   }}
                 />
               )}
@@ -345,6 +376,14 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
             </div>
           ))}
         </div>
+
+        {isSparse && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+             <div className="bg-surface/80 backdrop-blur-sm px-4 py-2 rounded-full border border-line shadow-sm mt-16">
+               <span className="text-[12px] font-medium text-ink">Keep logging meals to see your weekly trend</span>
+             </div>
+          </div>
+        )}
       </div>
     </div>
   );
