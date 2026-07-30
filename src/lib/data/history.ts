@@ -13,6 +13,20 @@ export interface ConversationHistoryItem extends Conversation {
   messageCount: number;
 }
 
+let globalDbMessages: ChatMessage[] | null = null;
+let globalDbConversation: Conversation | null = null;
+let globalDbConversations: ConversationHistoryItem[] | null = null;
+let globalFetchedUserId: string | null = null;
+let globalHasFetchedInitial = false;
+
+export function clearHistoryCache() {
+  globalDbMessages = null;
+  globalDbConversation = null;
+  globalDbConversations = null;
+  globalFetchedUserId = null;
+  globalHasFetchedInitial = false;
+}
+
 /**
  * Data Access Layer for History (Conversations, Messages).
  * Supports Supabase as primary, demo store as fallback.
@@ -22,12 +36,25 @@ export function useHistoryDAL() {
   const demoStore = useDemoStore();
   const supabase = useMemo(() => createClient(), []);
 
-  const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
-  const [dbConversation, setDbConversation] = useState<Conversation | null>(null);
-  const [dbConversations, setDbConversations] = useState<ConversationHistoryItem[]>([]);
+  const [dbMessages, setDbMessages] = useState<ChatMessage[]>(() => {
+    if (user && user.id === globalFetchedUserId && globalDbMessages) return globalDbMessages;
+    return [];
+  });
+  const [dbConversation, setDbConversation] = useState<Conversation | null>(() => {
+    if (user && user.id === globalFetchedUserId && globalDbConversation !== undefined) return globalDbConversation;
+    return null;
+  });
+  const [dbConversations, setDbConversations] = useState<ConversationHistoryItem[]>(() => {
+    if (user && user.id === globalFetchedUserId && globalDbConversations) return globalDbConversations;
+    return [];
+  });
+
   // True only while the initial Supabase history fetch is in-flight for an
   // authenticated user. Starts false for unauthenticated/demo paths.
-  const [historyLoading, setHistoryLoading] = useState(() => !!user);
+  const [historyLoading, setHistoryLoading] = useState(() => {
+    if (user && user.id === globalFetchedUserId && globalHasFetchedInitial) return false;
+    return !!user;
+  });
 
   const idMapRef = useRef<Record<string, string>>({});
   const pendingConvRef = useRef<Promise<string> | null>(null);
@@ -44,6 +71,15 @@ export function useHistoryDAL() {
 
   const conversation = user ? dbConversation : demoStore.state.conversation;
 
+  // Sync state to cache
+  useEffect(() => {
+    if (user && user.id === globalFetchedUserId) {
+      globalDbMessages = dbMessages;
+      globalDbConversation = dbConversation;
+      globalDbConversations = dbConversations;
+    }
+  }, [user, dbMessages, dbConversation, dbConversations]);
+
   useEffect(() => {
     if (!user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -51,14 +87,23 @@ export function useHistoryDAL() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDbConversation(null);
       setHistoryLoading(false);
+      clearHistoryCache();
       return;
     }
+
+    if (user.id === globalFetchedUserId && globalHasFetchedInitial) {
+      // Cache hit, skip refetch
+      return;
+    }
+
     setHistoryLoading(true);
 
     let isMounted = true;
 
     const fetchHistory = async () => {
       try {
+        globalFetchedUserId = user.id;
+
         // Fetch all user's conversations
         const { data: convData, error: convError } = await supabase
           .from("conversations")
@@ -128,10 +173,12 @@ export function useHistoryDAL() {
             setDbConversation(null);
             setDbMessages([]);
           }
+          globalHasFetchedInitial = true;
         } else if (!convData && isMounted) {
           setDbConversations([]);
           setDbConversation(null);
           setDbMessages([]);
+          globalHasFetchedInitial = true;
         }
       } catch (err) {
         console.error("History fetch error:", err);
