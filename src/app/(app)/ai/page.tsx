@@ -568,7 +568,7 @@ export default function AIPage() {
             </button>
           </div>
           
-          <div className="flex-1 rounded-full border border-line-strong bg-surface px-4 py-2.5 shadow-sm relative z-50">
+          <div className="flex-1 rounded-full border border-line-strong bg-surface px-4 py-2.5 shadow-sm relative z-50 transition-all duration-300 focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15 focus-within:shadow-md">
             <input
               placeholder="Ask your coach anything..."
               value={input}
