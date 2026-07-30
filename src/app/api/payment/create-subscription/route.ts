@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     console.log("[/api/payment/create-subscription] Debug Info:");
     console.log("RAZORPAY_KEY_ID exists:", !!keyId);
     console.log("RAZORPAY_KEY_SECRET exists:", !!keySecret);
-    console.log("RAZORPAY_KEY_ID (first 8):", keyId.substring(0, 8));
+    console.log("RAZORPAY_KEY_ID (first 12):", keyId.substring(0, 12));
 
     const razorpay = new Razorpay({
       key_id: keyId,
@@ -53,6 +53,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Razorpay Subscription
+    console.log("[/api/payment/create-subscription] Creating subscription for:");
+    console.log("Plan Name:", planName);
+    console.log("Provider Plan ID:", plan.provider_plan_id);
+
     const subscriptionParams = {
       plan_id: plan.provider_plan_id,
       customer_notify: 1,
