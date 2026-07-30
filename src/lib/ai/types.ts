@@ -42,3 +42,17 @@ export interface AIProvider {
   ): Promise<GenerateStructuredOutput<T>>;
   analyzeImage(input: AnalyzeImageInput): Promise<AnalyzeImageOutput>;
 }
+
+export class AIProviderTransientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AIProviderTransientError';
+  }
+}
+
+export class AIProviderClientError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AIProviderClientError';
+  }
+}

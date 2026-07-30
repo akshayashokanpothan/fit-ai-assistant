@@ -8,6 +8,7 @@ import type {
   GenerateTextInput,
   GenerateTextOutput,
 } from "./types";
+import { AIProviderTransientError, AIProviderClientError } from "./types";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
 
@@ -64,12 +65,12 @@ const SUPPORTED_MIME_TYPES = new Set([
 // checking for the sentinel phrase the route already embeds in the instruction.
 const SCREENSHOT_INSTRUCTION_SIGNAL = "fitness screenshot";
 
-export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"): AIProvider {
-  const apiKey = process.env[`GEMINI_API_KEY_${env}`];
+export function createGeminiProvider(envVarName: string): AIProvider {
+  const apiKey = process.env[envVarName];
 
   if (!apiKey) {
     throw new Error(
-      `GEMINI_API_KEY_${env} environment variable is not set. Please configure it in your server environment.`
+      `${envVarName} environment variable is not set. Please configure it in your server environment.`
     );
   }
 
@@ -101,9 +102,17 @@ export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"):
 
         return { text: response.text };
       } catch (err: unknown) {
-        console.error("[Gemini API Error] generateText failed:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        const lowerMsg = msg.toLowerCase();
+        
+        if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("exhausted") || 
+            lowerMsg.includes("500") || lowerMsg.includes("503") || lowerMsg.includes("timeout")) {
+          throw new AIProviderTransientError(msg);
+        }
+        
+        console.error(`[Gemini Vision Error (${envVarName})] generateText failed:`, msg);
         throw new Error(
-          "Failed to connect to the Gemini provider. Please try again."
+          "Generation failed. Please try again."
         );
       }
     },
@@ -122,14 +131,14 @@ export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"):
       // ── 1. Validate MIME type ──────────────────────────────────────────────
       const mime = (input.mediaType || "image/jpeg").toLowerCase();
       if (!SUPPORTED_MIME_TYPES.has(mime)) {
-        throw new Error(
+        throw new AIProviderClientError(
           `Unsupported image type "${mime}". Please upload a JPEG, PNG, GIF, or WebP image.`
         );
       }
 
       // ── 2. Validate Base64 payload (basic sanity) ──────────────────────────
       if (!input.imageBase64 || input.imageBase64.length < 4) {
-        throw new Error("Invalid or missing image data.");
+        throw new AIProviderClientError("Invalid or missing image data.");
       }
 
       // ── 3. Select schema based on analysis mode ────────────────────────────
@@ -193,8 +202,15 @@ export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"):
         // Expose only safe, user-facing error messages. Never expose API key,
         // raw SDK internals, environment values, or Base64 payloads.
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[Gemini Vision Error (${env})] analyzeImage failed:`, msg);
-        throw new Error(
+        const lowerMsg = msg.toLowerCase();
+        
+        if (lowerMsg.includes("429") || lowerMsg.includes("quota") || lowerMsg.includes("exhausted") || 
+            lowerMsg.includes("500") || lowerMsg.includes("503") || lowerMsg.includes("timeout")) {
+          throw new AIProviderTransientError(msg);
+        }
+        
+        console.error(`[Gemini Vision Error (${envVarName})] analyzeImage failed:`, msg);
+        throw new AIProviderClientError(
           "Image analysis failed. Please try a clearer photo or add the entry manually."
         );
       }
