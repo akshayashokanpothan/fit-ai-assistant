@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Camera, Dumbbell, Calendar, BarChart3, ChevronRight, Leaf } from "lucide-react";
+import { Camera, Dumbbell, Calendar, BarChart3 } from "lucide-react";
 
 interface Action {
   text: string;

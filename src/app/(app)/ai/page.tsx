@@ -18,7 +18,7 @@ import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
 import { PwaEngagementModal, PwaToasts } from "@/components/pwa-modals";
-import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles, Bot, Lock, Menu, Plus, MessageSquare } from "lucide-react";
+import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles, Menu, Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workout, Plan, AIContext, Profile, Meal, Activity } from "@/types";
 import { isToday, isYesterday, parseISO, format } from "date-fns";
@@ -389,7 +389,7 @@ export default function AIPage() {
                 <div className="flex flex-col flex-1">
                   <div className="rounded-[20px] rounded-tl-sm border border-line bg-surface p-4 shadow-sm">
                     <p className="text-[15px] text-ink leading-relaxed">
-                      <span className="font-bold block mb-0.5">I'm your AI fitness coach.</span>
+                      <span className="font-bold block mb-0.5">I&apos;m your AI fitness coach.</span>
                       What would you like to do today?
                     </p>
                   </div>
