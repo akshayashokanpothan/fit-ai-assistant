@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 import { getAIProvider } from "@/lib/ai";
+import { checkFeatureLimit, incrementUsage } from "@/lib/subscription";
 import { findFoodByName, sumNutrition } from "@/lib/nutrition/seed-foods";
 import type { MealItem } from "@/types";
 
@@ -16,6 +19,24 @@ export async function POST(req: NextRequest) {
 
     if (!imageBase64) {
       return NextResponse.json({ error: "imageBase64 is required" }, { status: 400 });
+    }
+
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const { allowed, limit } = await checkFeatureLimit(user.id, "meal_analysis");
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error: `You've reached today's meal analysis limit. ${
+              limit === 3 ? "Free plan includes 3 meal scans/day. Upgrade to Pro for more." : "Upgrade your plan to continue."
+            }`
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const provider = getAIProvider();
@@ -58,6 +79,12 @@ export async function POST(req: NextRequest) {
         },
         { status: 422 }
       );
+    }
+
+    if (user) {
+      await incrementUsage(user.id, "meal_analysis").catch((err) => {
+        console.error("[/api/ai/analyze-image] failed to increment usage:", err);
+      });
     }
 
     return NextResponse.json({

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDemoStore } from "@/lib/demo/store";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useProfileDAL } from "@/lib/data/profile";
+import { assignFreePlanAction } from "@/app/actions/subscription";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -183,6 +184,10 @@ export default function OnboardingPage() {
       setSubmitError(error);
       setSubmitting(false);
       return;
+    }
+
+    if (user?.id) {
+      await assignFreePlanAction(user.id);
     }
 
     let finalAvatarUrl = avatarUrl;

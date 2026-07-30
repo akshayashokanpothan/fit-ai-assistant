@@ -40,6 +40,8 @@ import {
   Utensils,
   Pencil
 } from "lucide-react";
+import { getUserPlanAction } from "@/app/actions/getUserPlan";
+import type { Plan as SubscriptionPlan } from "@/lib/subscription";
 
 const GOALS: { value: Goal; label: string }[] = [
   { value: "lose_weight", label: "Lose weight" },
@@ -107,11 +109,18 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      getUserPlanAction(user.id).then(plan => setSubscriptionPlan(plan));
+    }
+  }, [user]);
 
   async function onAvatarSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -419,9 +428,48 @@ export default function ProfilePage() {
 
       <div className="mt-10 space-y-8">
          <div>
-           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Account & Plan</h2>
-           <div className="rounded-[20px] border border-line overflow-hidden">
-             <ActionRow icon={<Crown className="w-5 h-5" />} title="Usage & plan" description="Free plan • Upgrade anytime" />
+           <h2 className="text-[12px] uppercase tracking-widest font-bold text-ink-soft mb-3 px-1">Pace AI Plan</h2>
+           <div className="rounded-[20px] bg-surface border border-line p-5">
+             <div className="flex justify-between items-start mb-4">
+               <div>
+                 <div className="flex items-center gap-2 mb-1">
+                   <Crown className="w-5 h-5 text-primary" />
+                   <span className="font-bold text-[17px] text-ink">{subscriptionPlan?.name || "Free"}</span>
+                 </div>
+                 <p className="text-[13px] text-ink-soft">
+                   {subscriptionPlan?.price === 0 ? "Basic access to Pace AI" : `₹${subscriptionPlan?.price}/month`}
+                 </p>
+               </div>
+             </div>
+             
+             <div className="space-y-2 mb-6">
+               <div className="flex justify-between items-center text-[13px]">
+                 <span className="text-ink-soft">Meal Scans</span>
+                 <span className="font-medium text-ink">
+                   {subscriptionPlan?.meal_analysis_daily_limit === -1 ? "Unlimited" : `${subscriptionPlan?.meal_analysis_daily_limit} / day`}
+                 </span>
+               </div>
+               <div className="flex justify-between items-center text-[13px]">
+                 <span className="text-ink-soft">AI Messages</span>
+                 <span className="font-medium text-ink">
+                   {subscriptionPlan?.chat_daily_limit === -1 ? "Unlimited" : `${subscriptionPlan?.chat_daily_limit} / day`}
+                 </span>
+               </div>
+               <div className="flex justify-between items-center text-[13px]">
+                 <span className="text-ink-soft">Workouts</span>
+                 <span className="font-medium text-ink">
+                   {subscriptionPlan?.workout_weekly_limit === -1 ? "Unlimited" : `${subscriptionPlan?.workout_weekly_limit} / week`}
+                 </span>
+               </div>
+             </div>
+
+             <Button 
+               variant="default" 
+               className="w-full"
+               onClick={() => router.push("/pricing")}
+             >
+               Upgrade Plan
+             </Button>
            </div>
          </div>
 
