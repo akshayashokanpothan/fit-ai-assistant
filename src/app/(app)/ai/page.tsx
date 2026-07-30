@@ -410,7 +410,7 @@ export default function AIPage() {
                       updateMessage(m.id, {
                         card: {
                           ...m.card,
-                          data: { ...(m.card.data as any), confirmed: true }
+                          data: { ...(m.card.data as { confirmed?: boolean }), confirmed: true }
                         }
                       });
                     }
@@ -421,7 +421,7 @@ export default function AIPage() {
                       updateMessage(m.id, {
                         card: {
                           ...m.card,
-                          data: { ...(m.card.data as any), confirmed: true }
+                          data: { ...(m.card.data as { confirmed?: boolean }), confirmed: true }
                         }
                       });
                     }
