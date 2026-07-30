@@ -702,11 +702,6 @@ function MessageBubble({
           <TypingIndicator text={message.content || undefined} />
         ) : message.content || (message.attachments && message.attachments.length > 0) ? (
           <div className={cn("flex", isUser ? "justify-end" : "justify-start mb-4")}>
-            {!isUser && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink mr-3 shadow-sm border border-line-strong mt-1">
-                <Bot className="h-4 w-4 text-[#335f42]" />
-              </div>
-            )}
             <div
               className={cn(
                 "rounded-[24px] px-4 py-3 text-[15px] leading-relaxed",
@@ -783,9 +778,6 @@ function MessageBubble({
 function TypingIndicator({ text = "Coach is thinking..." }: { text?: string }) {
   return (
     <div className="flex justify-start mb-4">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-ink mr-3 shadow-sm border border-line-strong mt-1">
-        <Bot className="h-4 w-4 text-[#335f42] animate-pulse" />
-      </div>
       <div className="flex items-center gap-3 rounded-[20px] rounded-tl-sm border border-line-strong bg-surface px-4 py-3 shadow-sm">
         <span className="text-[14px] text-ink-soft font-medium animate-pulse">{text}</span>
         <div className="flex gap-1">
