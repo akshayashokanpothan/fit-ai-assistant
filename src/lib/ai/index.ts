@@ -87,25 +87,26 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
 
     async analyzeImage(input: AnalyzeImageInput): Promise<AnalyzeImageOutput> {
       try {
+        console.log("[AI Resilience] Attempting primary Gemini provider...");
         return await primary.analyzeImage(input);
       } catch (err) {
          console.warn(
-          "[AI Resilience] Primary provider (Gemini) failed to analyze image. Rerouting to secondary fallback provider (Gemini FALLBACK)."
+          "[AI Resilience] Primary provider failed:", (err instanceof Error ? err.message : String(err))
         );
         if (secondary) {
+          console.log("[AI Resilience] Attempting secondary Gemini provider...");
           try {
             return await secondary.analyzeImage(input);
-          } catch {
+          } catch (err2) {
              console.warn(
-              "[AI Resilience] Secondary provider (Gemini FALLBACK) failed. Rerouting to tertiary fallback provider (Mock)."
+              "[AI Resilience] Secondary provider failed:", (err2 instanceof Error ? err2.message : String(err2))
             );
           }
         } else {
-           console.warn(
-            "[AI Resilience] Secondary provider not available. Rerouting to tertiary fallback provider (Mock)."
-          );
+          console.log("[AI Resilience] Secondary provider not available (skipped fallback).");
         }
         if (env === "PROD") {
+          console.error("[AI Resilience] Fallback chain exhausted. Final failure reason:", err instanceof Error ? err.message : String(err));
           throw err;
         }
         return await tertiary.analyzeImage(input);

@@ -9,7 +9,7 @@ import type {
   GenerateTextOutput,
 } from "./types";
 
-const DEFAULT_MODEL = "gemini-1.5-flash";
+const DEFAULT_MODEL = "gemini-3.6-flash";
 
 // ─── Gemini native responseSchema definitions ──────────────────────────────────
 // These constrain Gemini's output to valid JSON matching Pace's existing
@@ -193,7 +193,7 @@ export function createGeminiProvider(env: "PROD" | "DEV" | "FALLBACK" = "PROD"):
         // Expose only safe, user-facing error messages. Never expose API key,
         // raw SDK internals, environment values, or Base64 payloads.
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[Gemini Vision Error] analyzeImage failed:", msg);
+        console.error(`[Gemini Vision Error (${env})] analyzeImage failed:`, msg);
         throw new Error(
           "Image analysis failed. Please try a clearer photo or add the entry manually."
         );
