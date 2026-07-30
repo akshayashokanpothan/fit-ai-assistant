@@ -25,7 +25,7 @@ import {
   Sun
 } from "lucide-react";
 import { formatISO } from "date-fns";
-import { WeightProgressChart } from "@/components/weight-progress-chart";
+import { ProgressChart } from "@/components/progress-chart";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -108,7 +108,7 @@ export default function TodayPage() {
 
       {/* 2. Last 7 Days Progress Graph */}
       <section>
-         <WeightProgressChart metrics={bodyMetrics} />
+         <ProgressChart meals={meals} activities={activities} profile={profile} />
       </section>
 
       {/* 3. Daily Metrics (Horizontal Scroll) */}

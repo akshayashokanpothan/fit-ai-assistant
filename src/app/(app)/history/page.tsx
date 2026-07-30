@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isThisWeek, parseISO } from "date-fns";
 import { UtensilsCrossed, Dumbbell, Footprints, Scale, MessageCircle } from "lucide-react";
+import { WeightProgressChart } from "@/components/weight-progress-chart";
 
 type Group = "Today" | "This week" | "Earlier";
 
@@ -112,6 +113,11 @@ export default function HistoryPage() {
   return (
     <div className="px-5 pt-6">
       <h1 className="font-display text-[26px] font-medium text-ink">History</h1>
+
+      <div className="mt-6 mb-8">
+        <h2 className="text-[16px] font-bold text-ink mb-4">Body Progress</h2>
+        <WeightProgressChart metrics={bodyMetrics} />
+      </div>
 
       {workoutsError && (
         <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
