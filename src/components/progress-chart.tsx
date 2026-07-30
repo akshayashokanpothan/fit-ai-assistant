@@ -18,19 +18,19 @@ interface MetricConfig {
   id: MetricId;
   label: string;
   color: string;
-  getDailyValue: (meals: Meal[], activities: Activity[], isoDate: string) => number;
+  getDailyValue: (meals: Meal[], activities: Activity[], isoDate: string) => number | null;
   getTargetValue?: (targets: { kcal: number; proteinG: number }) => number | null;
 }
 
 const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
   proteinConsumed: {
     id: "proteinConsumed",
-    label: "Protein (g)",
+    label: "Protein",
     color: "#335f42",
     getDailyValue: (meals, _, isoDate) => {
-      return meals
-        .filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed")
-        .reduce((sum, m) => sum + (m.totalNutrition?.proteinG || 0), 0);
+      const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
+      if (dayMeals.length === 0) return null;
+      return dayMeals.reduce((sum, m) => sum + (m.totalNutrition?.proteinG || 0), 0);
     },
     getTargetValue: (targets) => targets.proteinG
   },
@@ -39,20 +39,20 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     label: "Calories (In)",
     color: "#f97316",
     getDailyValue: (meals, _, isoDate) => {
-      return meals
-        .filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed")
-        .reduce((sum, m) => sum + (m.totalNutrition?.kcal || 0), 0);
+      const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
+      if (dayMeals.length === 0) return null;
+      return dayMeals.reduce((sum, m) => sum + (m.totalNutrition?.kcal || 0), 0);
     },
     getTargetValue: (targets) => targets.kcal
   },
   fatConsumed: {
     id: "fatConsumed",
-    label: "Fat (g)",
+    label: "Fat",
     color: "#eab308",
     getDailyValue: (meals, _, isoDate) => {
-      return meals
-        .filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed")
-        .reduce((sum, m) => sum + (m.totalNutrition?.fatG || 0), 0);
+      const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
+      if (dayMeals.length === 0) return null;
+      return dayMeals.reduce((sum, m) => sum + (m.totalNutrition?.fatG || 0), 0);
     },
   },
   caloriesBurned: {
@@ -60,12 +60,19 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     label: "Calories (Out)",
     color: "#ef4444",
     getDailyValue: (_, activities, isoDate) => {
-      return activities
-        .filter(a => a.eventDate === isoDate && a.confirmationState === "confirmed")
-        .reduce((sum, a) => sum + (a.activeKcal || 0), 0);
+      const dayActs = activities.filter(a => a.eventDate === isoDate && a.confirmationState === "confirmed");
+      if (dayActs.length === 0) return null;
+      return dayActs.reduce((sum, a) => sum + (a.activeKcal || 0), 0);
     },
   }
 };
+
+function getNiceMax(val: number) {
+  if (val <= 0) return 10;
+  const target = val * 1.2;
+  const power = Math.pow(10, Math.max(0, Math.floor(Math.log10(target)) - 1));
+  return Math.ceil(target / power) * power;
+}
 
 export function ProgressChart({ meals, activities, profile }: ProgressChartProps) {
   const [metric1, setMetric1] = useState<MetricId>("proteinConsumed");
@@ -129,44 +136,74 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
     });
   }, [meals, activities, metric1, metric2]);
 
-  const height = 180;
-  const padding = { top: 30, bottom: 40, left: 0, right: 0 };
+  const height = 220;
+  const padding = { top: 40, bottom: 40, left: 16, right: 16 };
   const chartHeight = height - padding.top - padding.bottom;
 
-  // Compute Scales independently
-  const max1 = Math.max(...data.map(d => d.val1), target1 || 0);
-  const max2 = Math.max(...data.map(d => d.val2), target2 || 0);
+  const valid1 = data.map(d => d.val1).filter((v): v is number => v !== null);
+  const max1 = Math.max(...valid1, target1 || 0);
+  const valid2 = data.map(d => d.val2).filter((v): v is number => v !== null);
+  const max2 = Math.max(...valid2, target2 || 0);
   
-  // Provide a minimal bound so chart doesn't flatten to 0 if max is 0
-  const yMax1 = max1 === 0 ? 10 : max1 * 1.2; 
-  const yMax2 = max2 === 0 ? 10 : max2 * 1.2;
+  const yMax1 = getNiceMax(max1);
+  const yMax2 = getNiceMax(max2);
 
   const getY1 = (val: number) => padding.top + chartHeight - (val / yMax1) * chartHeight;
   const getY2 = (val: number) => padding.top + chartHeight - (val / yMax2) * chartHeight;
-  const getX = (index: number) => (index / 6) * 100;
+  const getX = (index: number) => {
+    // Add padding to the left and right inside the SVG container space so dots aren't clipped
+    return padding.left + (index / 6) * (100 - padding.left - padding.right); 
+  };
+  const getXPct = (index: number) => {
+     // Return percentage string for HTML positioning overlay
+     return `${getX(index)}%`;
+  }
 
   const m1Config = METRICS_CONFIG[metric1];
   const m2Config = METRICS_CONFIG[metric2];
 
   let path1 = "";
+  let path1Started = false;
   let path2 = "";
+  let path2Started = false;
+  
   data.forEach((d, i) => {
     const x = getX(i);
-    const y1 = getY1(d.val1);
-    const y2 = getY2(d.val2);
-    path1 += i === 0 ? `M ${x} ${y1}` : ` L ${x} ${y1}`;
-    path2 += i === 0 ? `M ${x} ${y2}` : ` L ${x} ${y2}`;
+    if (d.val1 !== null) {
+      const y1 = getY1(d.val1);
+      if (!path1Started) {
+        path1 += `M ${x} ${y1}`;
+        path1Started = true;
+      } else {
+        path1 += ` L ${x} ${y1}`;
+      }
+    } else {
+      path1Started = false;
+    }
+
+    if (d.val2 !== null) {
+      const y2 = getY2(d.val2);
+      if (!path2Started) {
+        path2 += `M ${x} ${y2}`;
+        path2Started = true;
+      } else {
+        path2 += ` L ${x} ${y2}`;
+      }
+    } else {
+      path2Started = false;
+    }
   });
 
   if (!loaded) return <div className="h-[280px] w-full rounded-[24px] bg-surface border border-line animate-pulse" />;
 
   return (
     <div className="rounded-[24px] bg-surface p-5 border border-line">
-      <div className="flex flex-col gap-3 mb-6">
-        <h2 className="text-[16px] font-bold text-ink">Weekly Progress</h2>
-        <div className="flex items-center gap-3 w-full">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: m1Config.color }} />
+      <div className="flex flex-col gap-1 mb-6">
+        <h2 className="text-[16px] font-bold text-ink">Your Progress</h2>
+        <p className="text-[13px] text-ink-soft mb-2">Compared with your daily goals</p>
+        <div className="flex items-center gap-3 w-full mt-2">
+          <div className="flex items-center gap-2 flex-1 rounded-full border border-line px-3 py-1.5 bg-paper">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m1Config.color }} />
             <select
               value={metric1}
               onChange={(e) => handleMetricChange("metric1", e.target.value as MetricId)}
@@ -177,8 +214,8 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2 flex-1">
-            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: m2Config.color }} />
+          <div className="flex items-center gap-2 flex-1 rounded-full border border-line px-3 py-1.5 bg-paper">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m2Config.color }} />
             <select
               value={metric2}
               onChange={(e) => handleMetricChange("metric2", e.target.value as MetricId)}
@@ -196,19 +233,36 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
         {/* Highlight current day column */}
         <div className="absolute right-0 top-0 bottom-[30px] w-[14.28%] bg-black/5 rounded-[12px] -z-10 pointer-events-none" />
 
+        {/* Y-axis grid lines and labels */}
+        {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
+           const y = padding.top + chartHeight - ratio * chartHeight;
+           const val1 = Math.round(yMax1 * ratio);
+           const val2 = Math.round(yMax2 * ratio);
+           return (
+             <div key={ratio} className="absolute left-0 right-0 pointer-events-none border-t border-line-strong" style={{ top: `${y}px`, opacity: 0.4 }}>
+               <div className="absolute left-0 -top-4 text-[9px] font-medium text-ink-soft bg-surface px-1">
+                 {val1}{m1Config.id.includes("protein") || m1Config.id.includes("fat") ? "g" : ""}
+               </div>
+               <div className="absolute right-0 -top-4 text-[9px] font-medium text-ink-soft bg-surface px-1">
+                 {val2}{m2Config.id.includes("protein") || m2Config.id.includes("fat") ? "g" : ""}
+               </div>
+             </div>
+           );
+        })}
+
         <svg className="w-full overflow-visible" height={height} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none">
           {/* Target Lines */}
           {target1 && (
             <line
               x1="0" y1={getY1(target1)} x2="100" y2={getY1(target1)}
-              stroke={m1Config.color} strokeWidth="1" strokeDasharray="4 4" strokeOpacity="0.4"
+              stroke={m1Config.color} strokeWidth="1.5" strokeDasharray="4 4" strokeOpacity="0.5"
               vectorEffect="non-scaling-stroke"
             />
           )}
           {target2 && (
             <line
               x1="0" y1={getY2(target2)} x2="100" y2={getY2(target2)}
-              stroke={m2Config.color} strokeWidth="1" strokeDasharray="4 4" strokeOpacity="0.4"
+              stroke={m2Config.color} strokeWidth="1.5" strokeDasharray="4 4" strokeOpacity="0.5"
               vectorEffect="non-scaling-stroke"
             />
           )}
@@ -217,39 +271,71 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
           <path d={path2} fill="none" stroke={m2Config.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
 
+        {/* Target labels */}
+        {target1 && (
+          <div 
+            className="absolute left-2 px-1 bg-surface text-[10px] font-bold leading-none pointer-events-none z-10"
+            style={{ 
+              top: `${getY1(target1) - 12}px`, 
+              color: m1Config.color 
+            }}
+          >
+            User target: {target1}{m1Config.id.includes("protein") ? "g" : " kcal"}
+          </div>
+        )}
+        {target2 && (
+          <div 
+            className="absolute right-2 px-1 bg-surface text-[10px] font-bold leading-none pointer-events-none z-10 text-right"
+            style={{ 
+              top: `${getY2(target2) - 12}px`, 
+              color: m2Config.color 
+            }}
+          >
+            User target: {target2}{m2Config.id.includes("protein") ? "g" : " kcal"}
+          </div>
+        )}
+
         {/* Data points */}
         {data.map((point, i) => {
-          const x = getX(i);
+          const xPct = getXPct(i);
           return (
-            <div key={i} className="absolute inset-0 pointer-events-none">
-              <div 
-                className="absolute bg-white rounded-full shadow-sm"
-                style={{
-                  left: `${x}%`,
-                  top: `${getY1(point.val1)}px`,
-                  width: '8px', height: '8px',
-                  border: `2px solid ${m1Config.color}`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              />
-              <div 
-                className="absolute bg-white rounded-full shadow-sm"
-                style={{
-                  left: `${x}%`,
-                  top: `${getY2(point.val2)}px`,
-                  width: '8px', height: '8px',
-                  border: `2px solid ${m2Config.color}`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              />
+            <div key={i} className="absolute inset-0 pointer-events-none z-20">
+              {point.val1 !== null && (
+                <div 
+                  className="absolute bg-white rounded-full shadow-sm"
+                  style={{
+                    left: xPct,
+                    top: `${getY1(point.val1)}px`,
+                    width: '8px', height: '8px',
+                    border: `2px solid ${m1Config.color}`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              )}
+              {point.val2 !== null && (
+                <div 
+                  className="absolute bg-white rounded-full shadow-sm"
+                  style={{
+                    left: xPct,
+                    top: `${getY2(point.val2)}px`,
+                    width: '8px', height: '8px',
+                    border: `2px solid ${m2Config.color}`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              )}
             </div>
           );
         })}
 
         {/* X-axis labels */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 flex justify-between items-end pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none">
           {data.map((point, i) => (
-            <div key={i} className="w-[14.28%] text-center">
+            <div 
+              key={i} 
+              className="absolute transform -translate-x-1/2" 
+              style={{ left: getXPct(i) }}
+            >
               <span className={cn(
                 "text-[11px] font-medium",
                 point.isToday ? "text-ink font-bold" : "text-ink-soft"
