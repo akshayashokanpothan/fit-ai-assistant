@@ -470,14 +470,16 @@ export default function AIPage() {
           </div>
         )}
 
-        {/* Only show bottom pills if we're not in the empty state */}
+        {/* Floating Quick Actions */}
         {(messages.length > 1 || (messages.length === 1 && messages[0].id !== WELCOME_MESSAGE_ID)) && (
-          <div className="mb-3">
-            <QuickActions onPick={onQuickAction} variant="active" />
+          <div className="absolute -top-14 left-0 right-0 z-10 pointer-events-none">
+            <div className="pointer-events-auto">
+              <QuickActions onPick={onQuickAction} variant="active" />
+            </div>
           </div>
         )}
 
-        <div className="flex items-center gap-3 pb-3 relative">
+        <div className="flex items-center gap-2.5 pb-4 relative z-20">
           <input
             ref={fileInputRef}
             type="file"
@@ -502,7 +504,7 @@ export default function AIPage() {
           
           <div className="relative">
             {menuExpanded && (
-              <div className="absolute bottom-14 left-0 flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
+              <div className="absolute bottom-14 left-0 flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200 z-50">
                 <button
                   onClick={() => cameraInputRef.current?.click()}
                   className="flex items-center gap-3 w-max group"
@@ -530,7 +532,7 @@ export default function AIPage() {
             
             {menuExpanded && (
               <div 
-                className="fixed inset-0 z-[-1]" 
+                className="fixed inset-0 z-40" 
                 onClick={() => setMenuExpanded(false)}
                 aria-hidden="true"
               />
@@ -540,7 +542,7 @@ export default function AIPage() {
               onClick={() => setMenuExpanded(!menuExpanded)}
               aria-label={menuExpanded ? "Close menu" : "Attach media"}
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-line bg-surface transition-all duration-200 shadow-sm",
+                "flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border border-line bg-surface transition-all duration-200 shadow-sm relative z-50",
                 menuExpanded 
                   ? "bg-primary-soft text-primary rotate-90" 
                   : "text-ink hover:bg-black/[0.04]"
@@ -550,7 +552,7 @@ export default function AIPage() {
             </button>
           </div>
           
-          <div className="flex flex-1 items-center rounded-full border border-line-strong bg-surface pl-4 pr-1.5 py-1.5 shadow-sm">
+          <div className="flex-1 rounded-full border border-line-strong bg-surface px-4 py-2.5 shadow-sm relative z-50">
             <input
               placeholder="Ask your coach anything..."
               value={input}
@@ -561,20 +563,21 @@ export default function AIPage() {
                   sendText(input);
                 }
               }}
-              className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted py-1"
+              className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted"
             />
-            <button
-              aria-label="Send"
-              disabled={!input.trim() || busy}
-              onClick={() => sendText(input)}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full bg-[#335f42] text-white transition-opacity",
-                (!input.trim() || busy) && "opacity-50"
-              )}
-            >
-              <Send className="h-4 w-4 ml-0.5" />
-            </button>
           </div>
+
+          <button
+            aria-label="Send"
+            disabled={!input.trim() || busy}
+            onClick={() => sendText(input)}
+            className={cn(
+              "flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-[#335f42] text-white shadow-md transition-all hover:bg-[#2a4d35] relative z-50",
+              (!input.trim() || busy) && "opacity-50"
+            )}
+          >
+            <Send className="h-5 w-5 ml-0.5" />
+          </button>
         </div>
       </div>
       
