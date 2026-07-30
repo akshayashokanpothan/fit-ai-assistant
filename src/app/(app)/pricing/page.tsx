@@ -116,8 +116,12 @@ export default function PricingPage() {
         throw new Error(data.error || "Failed to create subscription");
       }
 
+      const publicKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
+      console.log("[Pricing Checkout] NEXT_PUBLIC_RAZORPAY_KEY_ID exists:", !!publicKey);
+      console.log("[Pricing Checkout] Key (first 8):", publicKey.substring(0, 8));
+
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Use public key here
+        key: publicKey,
         subscription_id: data.subscriptionId,
         name: "Pace AI",
         description: `${planName} Subscription`,
