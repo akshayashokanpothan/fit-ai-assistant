@@ -36,9 +36,18 @@ function greetingContent(
   profile: Profile | null,
   meals: Meal[],
   workouts: Workout[],
-  activities: Activity[]
+  activities: Activity[],
+  upgradedPlan: string | null
 ): { title: string; subtitle: string } {
   const name = profile?.displayName?.trim()?.split(" ")[0] || "";
+
+  if (upgradedPlan) {
+    return { 
+      title: `Welcome to ${upgradedPlan}, ${name} 👋`, 
+      subtitle: "Your AI coach is ready with expanded limits." 
+    };
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   
   const todaysMeals = meals.filter(m => m.eventTime && m.eventTime.startsWith(today) && m.confirmationState === 'confirmed');
@@ -95,6 +104,17 @@ export default function AIPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [upgradedPlan, setUpgradedPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const upgrade = sessionStorage.getItem("pace_subscription_upgrade");
+    if (upgrade) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUpgradedPlan(upgrade);
+      sessionStorage.removeItem("pace_subscription_upgrade");
+    }
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -156,7 +176,7 @@ export default function AIPage() {
         .map((m) => {
           let content = m.content || "";
           if (m.id === WELCOME_MESSAGE_ID) {
-            const greeting = greetingContent(profile, meals, workouts, activities);
+            const greeting = greetingContent(profile, meals, workouts, activities, upgradedPlan);
             content = `${greeting.title} ${greeting.subtitle}`;
           }
           return { role: m.role as "user" | "assistant", content };
@@ -375,11 +395,11 @@ export default function AIPage() {
         <div className="space-y-5 pb-4">
           {messages.length === 1 && messages[0].id === WELCOME_MESSAGE_ID ? (
             <div className="flex flex-col pt-6 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-[28px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif" dangerouslySetInnerHTML={{__html: greetingContent(profile, meals, workouts, activities).title.replace(',', ',<br />')}}>
+              <h2 className="text-[28px] font-medium text-ink mb-2 text-center tracking-tight px-4 font-serif" dangerouslySetInnerHTML={{__html: greetingContent(profile, meals, workouts, activities, upgradedPlan).title.replace(',', ',<br />')}}>
               </h2>
               
               <p className="text-[15px] text-ink-soft text-center px-6 mb-8 leading-relaxed">
-                {greetingContent(profile, meals, workouts, activities).subtitle}
+                {greetingContent(profile, meals, workouts, activities, upgradedPlan).subtitle}
               </p>
 
               <div className="flex items-start gap-3 px-1 mb-6">
@@ -406,7 +426,7 @@ export default function AIPage() {
           ) : (
             messages.map((m) => {
               const displayMessage =
-                m.id === WELCOME_MESSAGE_ID ? { ...m, content: `${greetingContent(profile, meals, workouts, activities).title}\n\n${greetingContent(profile, meals, workouts, activities).subtitle}` } : m;
+                m.id === WELCOME_MESSAGE_ID ? { ...m, content: `${greetingContent(profile, meals, workouts, activities, upgradedPlan).title}\n\n${greetingContent(profile, meals, workouts, activities, upgradedPlan).subtitle}` } : m;
               return (
                 <MessageBubble
                   key={m.id}

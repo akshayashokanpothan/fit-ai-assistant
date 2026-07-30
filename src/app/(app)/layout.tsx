@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useProfileDAL } from "@/lib/data/profile";
 import { BottomNav } from "@/components/bottom-nav";
 import { TopBar } from "@/components/top-bar";
+import { SubscriptionProvider } from "@/providers/subscription-provider";
 
 export default function AppShellLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -34,10 +35,12 @@ export default function AppShellLayout({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col bg-paper">
-      <TopBar />
-      <main className="flex-1 pb-2">{children}</main>
-      <BottomNav />
-    </div>
+    <SubscriptionProvider>
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-1 flex-col bg-paper">
+        <TopBar />
+        <main className="flex-1 pb-2">{children}</main>
+        <BottomNav />
+      </div>
+    </SubscriptionProvider>
   );
 }

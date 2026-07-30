@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Crown } from "lucide-react";
+import { ArrowLeft, Check, Crown, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { getUserPlanAction } from "@/app/actions/getUserPlan";
+import { useSubscription } from "@/providers/subscription-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SubscriptionSuccessModal } from "@/components/subscription-success-modal";
 
-// Define razorpay window type
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,21 +59,31 @@ const PLANS = [
 export default function PricingPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [currentPlanName, setCurrentPlanName] = useState<string>("Free");
-  const [loading, setLoading] = useState(true);
+  const { plan: currentPlan, loading, refreshPlan } = useSubscription();
   const [checkoutProcessing, setCheckoutProcessing] = useState<string | null>(null);
+  const [verificationTransition, setVerificationTransition] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      getUserPlanAction(user.id).then((plan) => {
-        if (plan) setCurrentPlanName(plan.name);
-        setLoading(false);
-      });
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false);
+  const currentPlanName = currentPlan?.name || "Free";
+
+  const getButtonText = (planName: string) => {
+    if (checkoutProcessing === planName) return "Processing...";
+    if (currentPlanName === "Free") {
+      return planName === "Free" ? "Current Plan" : "Upgrade";
     }
-  }, [user]);
+    if (currentPlanName === "Pro") {
+      if (planName === "Free") return "Switch to Free";
+      if (planName === "Pro") return "Current Plan";
+      if (planName === "Pro+") return "Upgrade";
+    }
+    if (currentPlanName === "Pro+") {
+      if (planName === "Free") return "Switch to Free";
+      if (planName === "Pro") return "Switch to Pro";
+      if (planName === "Pro+") return "Current Plan";
+    }
+    return "Upgrade";
+  };
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -94,11 +104,21 @@ export default function PricingPage() {
       router.push("/login");
       return;
     }
+    if (planName === "Free") {
+      setErrorToast("To switch to Free, please cancel your subscription in profile settings.");
+      return;
+    }
+    if (planName === "Pro" && currentPlanName === "Pro+") {
+      setErrorToast("To switch to Pro, please cancel your Pro+ plan first.");
+      return;
+    }
+
     setCheckoutProcessing(planName);
+    setErrorToast(null);
 
     const res = await loadRazorpay();
     if (!res) {
-      alert("Failed to load Razorpay SDK. Please check your internet connection.");
+      setErrorToast("Failed to load Razorpay SDK. Please check your internet connection.");
       setCheckoutProcessing(null);
       return;
     }
@@ -117,8 +137,6 @@ export default function PricingPage() {
       }
 
       const publicKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
-      console.log("[Pricing Checkout] NEXT_PUBLIC_RAZORPAY_KEY_ID exists:", !!publicKey);
-      console.log("[Pricing Checkout] Key (first 8):", publicKey.substring(0, 8));
 
       const options = {
         key: publicKey,
@@ -126,6 +144,7 @@ export default function PricingPage() {
         name: "Pace AI",
         description: `${planName} Subscription`,
         handler: async function (response: { razorpay_payment_id: string; razorpay_subscription_id: string; razorpay_signature: string }) {
+          setVerificationTransition(true);
           try {
             const verifyRes = await fetch("/api/payment/verify-subscription", {
               method: "POST",
@@ -140,13 +159,14 @@ export default function PricingPage() {
 
             if (!verifyRes.ok) throw new Error("Verification failed");
 
-            alert("Payment successful! Your plan is now active.");
-            getUserPlanAction(user.id).then((plan) => {
-              if (plan) setCurrentPlanName(plan.name);
-            });
+            sessionStorage.setItem("pace_subscription_upgrade", planName);
+            await refreshPlan();
+            setShowSuccessModal(true);
           } catch (e) {
             console.error("Verification error:", e);
-            alert("Payment completed but verification delayed. Your plan will update shortly via webhook.");
+            setErrorToast("Payment completed but verification delayed. Your plan will update shortly via webhook.");
+          } finally {
+            setVerificationTransition(false);
           }
         },
         prefill: {
@@ -159,14 +179,14 @@ export default function PricingPage() {
 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", function (response: { error: { description: string } }) {
-        alert(response.error.description);
+        setErrorToast(response.error.description);
       });
       rzp.open();
     } catch (error: unknown) {
       if (error instanceof Error) {
-        alert(error.message);
+        setErrorToast(error.message);
       } else {
-        alert("An unknown error occurred.");
+        setErrorToast("An unknown error occurred.");
       }
     } finally {
       setCheckoutProcessing(null);
@@ -183,6 +203,11 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-paper pb-20">
+      <SubscriptionSuccessModal 
+        isOpen={showSuccessModal} 
+        onClose={() => setShowSuccessModal(false)} 
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-surface/80 px-4 backdrop-blur-xl">
         <button
@@ -205,6 +230,13 @@ export default function PricingPage() {
           </p>
         </div>
 
+        {errorToast && (
+          <div className="mb-6 rounded-[16px] bg-red-50 border border-red-100 p-4 flex gap-3 items-start animate-in fade-in">
+            <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-[14px] text-red-900 leading-relaxed">{errorToast}</p>
+          </div>
+        )}
+
         <div className="space-y-4">
           {PLANS.map((plan) => {
             const isCurrent = currentPlanName === plan.name;
@@ -214,24 +246,29 @@ export default function PricingPage() {
                 key={plan.name}
                 className={cn(
                   "relative rounded-[24px] border p-6 overflow-hidden transition-all",
-                  plan.isPopular
-                    ? "bg-surface border-primary shadow-sm"
-                    : "bg-surface border-line"
+                  isCurrent 
+                    ? "bg-[#f1f6f3]/30 border-[#335f42] shadow-sm" 
+                    : plan.isPopular
+                      ? "bg-surface border-primary shadow-sm"
+                      : "bg-surface border-line"
                 )}
               >
-                {plan.isPopular && (
+                {plan.isPopular && !isCurrent && (
                   <div className="absolute top-0 inset-x-0 h-1 bg-primary" />
+                )}
+                {isCurrent && (
+                  <div className="absolute top-0 inset-x-0 h-1 bg-[#335f42]" />
                 )}
                 
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    {plan.isPopular && <Crown className="w-5 h-5 text-primary" />}
+                    {!isCurrent && plan.isPopular && <Crown className="w-5 h-5 text-primary" />}
                     <h2 className="text-[18px] font-bold text-ink">
                       {plan.name} {plan.isPopular && "⭐"}
                     </h2>
                   </div>
                   {isCurrent && (
-                    <span className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                    <span className="bg-[#335f42]/10 text-[#335f42] text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
                       Current
                     </span>
                   )}
@@ -247,7 +284,7 @@ export default function PricingPage() {
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <Check className={cn("w-4 h-4 shrink-0 mt-0.5", isCurrent ? "text-[#335f42]" : "text-primary")} />
                       <span className="text-[13px] text-ink">{feature}</span>
                     </li>
                   ))}
@@ -257,22 +294,29 @@ export default function PricingPage() {
                   className={cn(
                     "w-full h-12 rounded-[16px] font-bold text-[15px]",
                     isCurrent 
-                      ? "bg-line text-ink-soft hover:bg-line cursor-default" 
+                      ? "bg-[#335f42]/10 text-[#335f42] hover:bg-[#335f42]/20 cursor-default" 
                       : plan.isPopular
                         ? "bg-primary text-white hover:bg-primary/90"
                         : "bg-ink text-surface hover:bg-ink/90"
                   )}
                   variant={isCurrent ? "outline" : "primary"}
-                  disabled={isCurrent || checkoutProcessing !== null}
+                  disabled={isCurrent || checkoutProcessing !== null || verificationTransition}
                   onClick={() => !isCurrent && handleUpgrade(plan.name)}
                 >
-                  {isCurrent ? "Current Plan" : (checkoutProcessing === plan.name ? "Processing..." : "Upgrade")}
+                  {getButtonText(plan.name)}
                 </Button>
               </div>
             );
           })}
         </div>
       </div>
+
+      {verificationTransition && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-paper/90 backdrop-blur-sm animate-in fade-in">
+          <Loader2 className="h-10 w-10 animate-spin text-[#335f42] mb-4" />
+          <p className="text-[16px] font-medium text-ink">Updating your Pace AI experience...</p>
+        </div>
+      )}
     </div>
   );
 }
