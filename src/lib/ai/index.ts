@@ -41,7 +41,7 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     async generateText(input: GenerateTextInput): Promise<GenerateTextOutput> {
       try {
         return await primary.generateText(input);
-      } catch {
+      } catch (err) {
         console.warn(
           "[AI Resilience] Primary provider (Gemini) failed to generate text. Rerouting to secondary fallback provider (Gemini FALLBACK)."
         );
@@ -60,6 +60,9 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
           );
         }
         
+        if (env === "PROD") {
+          throw err;
+        }
         return await tertiary.generateText(input);
       }
     },
@@ -69,11 +72,14 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     ): Promise<GenerateStructuredOutput<T>> {
       try {
         return await primary.generateStructuredOutput(input);
-      } catch {
+      } catch (err) {
         if (secondary) {
           try {
             return await secondary.generateStructuredOutput(input);
           } catch {}
+        }
+        if (env === "PROD") {
+          throw err;
         }
         return await tertiary.generateStructuredOutput(input);
       }
@@ -82,7 +88,7 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
     async analyzeImage(input: AnalyzeImageInput): Promise<AnalyzeImageOutput> {
       try {
         return await primary.analyzeImage(input);
-      } catch {
+      } catch (err) {
          console.warn(
           "[AI Resilience] Primary provider (Gemini) failed to analyze image. Rerouting to secondary fallback provider (Gemini FALLBACK)."
         );
@@ -98,6 +104,9 @@ function createResilientGeminiProvider(env: "PROD" | "DEV"): AIProvider {
            console.warn(
             "[AI Resilience] Secondary provider not available. Rerouting to tertiary fallback provider (Mock)."
           );
+        }
+        if (env === "PROD") {
+          throw err;
         }
         return await tertiary.analyzeImage(input);
       }

@@ -9,7 +9,7 @@ import type {
   GenerateTextOutput,
 } from "./types";
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-1.5-flash";
 
 // ─── Gemini native responseSchema definitions ──────────────────────────────────
 // These constrain Gemini's output to valid JSON matching Pace's existing
