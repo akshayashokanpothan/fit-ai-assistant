@@ -41,6 +41,7 @@ export function MealReviewCard({
   const [confirmed, setConfirmed] = useState(isConfirmed);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState(false);
 
   const total = sumNutrition(items.map((i) => i.nutrition));
 
@@ -77,9 +78,17 @@ export function MealReviewCard({
         </div>
 
         {/* Right side soft food illustration */}
-        <div className="absolute right-[-10px] top-2 w-[85px] h-[85px] opacity-95 pointer-events-none z-0">
-          <Image src="/illustrations/food/meal-bowl.svg" alt="" fill className="object-contain" />
-        </div>
+        {!imgError && (
+          <div className="absolute right-[-10px] top-2 w-[85px] h-[85px] opacity-95 pointer-events-none z-0">
+            <Image 
+              src="/illustrations/food/meal-bowl.svg" 
+              alt="" 
+              fill 
+              className="object-contain" 
+              onError={() => setImgError(true)}
+            />
+          </div>
+        )}
 
         {/* Nutritional Summary Section */}
         <div className="mt-4 grid grid-cols-4 pt-4 border-t border-line/80 relative z-10">
