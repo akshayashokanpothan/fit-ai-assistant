@@ -406,9 +406,25 @@ export default function AIPage() {
                   message={displayMessage}
                   onConfirmMeal={async (items, mealType, mediaUploadId) => {
                     await confirmMeal(mealType, items, "image_ai", mediaUploadId);
+                    if (m.card && m.card.kind === "meal_review") {
+                      updateMessage(m.id, {
+                        card: {
+                          ...m.card,
+                          data: { ...(m.card.data as any), confirmed: true }
+                        }
+                      });
+                    }
                   }}
-                  onConfirmActivity={(draft) => {
-                    confirmActivity(draft, "screenshot_ai");
+                  onConfirmActivity={async (draft) => {
+                    await confirmActivity(draft, "screenshot_ai");
+                    if (m.card && m.card.kind === "activity_review") {
+                      updateMessage(m.id, {
+                        card: {
+                          ...m.card,
+                          data: { ...(m.card.data as any), confirmed: true }
+                        }
+                      });
+                    }
                   }}
                 />
               );
@@ -728,6 +744,7 @@ function MessageBubble({
 
         {message.card?.kind === "meal_review" && (
           <MealReviewCard
+            isConfirmed={!!(message.card.data as { confirmed?: boolean }).confirmed}
             initialItems={(message.card.data as { items: MealItem[] }).items}
             onConfirm={async (items, mealType) =>
               await onConfirmMeal(
@@ -741,6 +758,7 @@ function MessageBubble({
 
         {message.card?.kind === "activity_review" && (
           <ActivityReviewCard
+            isConfirmed={!!(message.card.data as { confirmed?: boolean }).confirmed}
             draft={(message.card.data as { draft: ActivityDraft }).draft}
             onConfirm={onConfirmActivity}
           />

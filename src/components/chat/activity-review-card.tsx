@@ -17,13 +17,15 @@ export interface ActivityDraft {
 export function ActivityReviewCard({
   draft,
   onConfirm,
+  isConfirmed = false,
 }: {
   draft: ActivityDraft;
   onConfirm: (draft: ActivityDraft) => void;
+  isConfirmed?: boolean;
 }) {
   const [values, setValues] = useState(draft);
   const [editing, setEditing] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(isConfirmed);
 
   if (confirmed) {
     return (

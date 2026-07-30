@@ -26,14 +26,16 @@ function defaultMealType(): MealType {
 export function MealReviewCard({
   initialItems,
   onConfirm,
+  isConfirmed = false,
 }: {
   initialItems: MealItem[];
   onConfirm: (items: MealItem[], mealType: MealType) => Promise<void>;
+  isConfirmed?: boolean;
 }) {
   const [items, setItems] = useState(initialItems);
   const [mealType, setMealType] = useState<MealType>(defaultMealType());
   const [editing, setEditing] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(isConfirmed);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
