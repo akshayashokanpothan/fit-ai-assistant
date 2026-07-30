@@ -464,7 +464,7 @@ export default function ProfilePage() {
              </div>
 
              <Button 
-               variant="default" 
+               variant="primary" 
                className="w-full"
                onClick={() => router.push("/pricing")}
              >

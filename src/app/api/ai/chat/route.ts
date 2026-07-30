@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const result = await handleChatMessage(message, context, history ?? []);
     
-    if (user && result && result.content) {
+    if (user && result && result.reply) {
       await incrementUsage(user.id, "ai_message").catch((err) => {
         console.error("[/api/ai/chat] failed to increment usage:", err);
       });

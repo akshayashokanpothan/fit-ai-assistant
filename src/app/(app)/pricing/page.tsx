@@ -7,11 +7,11 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { getUserPlanAction } from "@/app/actions/getUserPlan";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Plan as SubscriptionPlan } from "@/lib/subscription";
 
 // Define razorpay window type
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -70,6 +70,7 @@ export default function PricingPage() {
         setLoading(false);
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
     }
   }, [user]);
@@ -138,12 +139,16 @@ export default function PricingPage() {
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", function (response: any) {
+      rzp.on("payment.failed", function (response: { error: { description: string } }) {
         alert(response.error.description);
       });
       rzp.open();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("An unknown error occurred.");
+      }
     } finally {
       setCheckoutProcessing(null);
     }
@@ -238,7 +243,7 @@ export default function PricingPage() {
                         ? "bg-primary text-white hover:bg-primary/90"
                         : "bg-ink text-surface hover:bg-ink/90"
                   )}
-                  variant={isCurrent ? "outline" : "default"}
+                  variant={isCurrent ? "outline" : "primary"}
                   disabled={isCurrent || checkoutProcessing !== null}
                   onClick={() => !isCurrent && handleUpgrade(plan.name)}
                 >
