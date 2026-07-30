@@ -5,9 +5,17 @@ import Razorpay from "razorpay";
 
 export async function POST(req: NextRequest) {
   try {
+    const keyId = process.env.RAZORPAY_KEY_ID || "";
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
+    
+    console.log("[/api/payment/create-subscription] Debug Info:");
+    console.log("RAZORPAY_KEY_ID exists:", !!keyId);
+    console.log("RAZORPAY_KEY_SECRET exists:", !!keySecret);
+    console.log("RAZORPAY_KEY_ID (first 8):", keyId.substring(0, 8));
+
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID || "",
-      key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
     const cookieStore = await cookies();
