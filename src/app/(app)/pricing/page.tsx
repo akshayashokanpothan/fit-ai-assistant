@@ -125,14 +125,29 @@ export default function PricingPage() {
         subscription_id: data.subscriptionId,
         name: "Pace AI",
         description: `${planName} Subscription`,
-        handler: function () {
-          // Success callback
-          // We rely on the webhook to actually activate the plan, but we can show a success message here
-          alert("Payment successful! Your plan will be updated momentarily.");
-          // Optionally refetch user plan
-          getUserPlanAction(user.id).then((plan) => {
-            if (plan) setCurrentPlanName(plan.name);
-          });
+        handler: async function (response: { razorpay_payment_id: string; razorpay_subscription_id: string; razorpay_signature: string }) {
+          try {
+            const verifyRes = await fetch("/api/payment/verify-subscription", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_subscription_id: response.razorpay_subscription_id,
+                razorpay_signature: response.razorpay_signature,
+                planName: planName
+              })
+            });
+
+            if (!verifyRes.ok) throw new Error("Verification failed");
+
+            alert("Payment successful! Your plan is now active.");
+            getUserPlanAction(user.id).then((plan) => {
+              if (plan) setCurrentPlanName(plan.name);
+            });
+          } catch (e) {
+            console.error("Verification error:", e);
+            alert("Payment completed but verification delayed. Your plan will update shortly via webhook.");
+          }
         },
         prefill: {
           email: user.email,
