@@ -7,12 +7,10 @@ import { useMealsDAL } from "@/lib/data/meals";
 import { useProfileDAL } from "@/lib/data/profile";
 import { useActivitiesDAL } from "@/lib/data/activities";
 import { usePlansDAL } from "@/lib/data/plans";
-import { useHistoryDAL } from "@/lib/data/history";
+import { useHistoryDAL, type ConversationHistoryItem } from "@/lib/data/history";
 import { usePwa } from "@/lib/pwa/pwa-context";
 import { buildAIContext } from "@/lib/demo/build-context";
 import type { ChatMessage, MealItem, MealType } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { QuickActions } from "@/components/chat/quick-actions";
 import { MealReviewCard } from "@/components/chat/meal-review-card";
 import { ActivityReviewCard, type ActivityDraft } from "@/components/chat/activity-review-card";
@@ -20,9 +18,10 @@ import { WorkoutPreviewCard } from "@/components/chat/workout-preview-card";
 import { PlanPreviewCard } from "@/components/chat/plan-preview-card";
 import { TodaySummaryCard } from "@/components/chat/today-summary-card";
 import { PwaEngagementModal, PwaToasts } from "@/components/pwa-modals";
-import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles, Bot, Info, Lock } from "lucide-react";
+import { Camera, Send, TriangleAlert, X, Image as ImageIcon, Sparkles, Bot, Lock, Menu, Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workout, Plan, AIContext, Profile, Meal, Activity } from "@/types";
+import { isToday, isYesterday, parseISO, format } from "date-fns";
 
 const WELCOME_MESSAGE_ID = "msg-welcome";
 
@@ -75,7 +74,7 @@ interface PendingImage {
 
 export default function AIPage() {
   const { recordUsage, state: demoState } = useDemoStore();
-  const { messages, conversation, addMessage, updateMessage, historyLoading } = useHistoryDAL();
+  const { messages, conversation, conversations, addMessage, updateMessage, historyLoading, loadConversation, startNewConversation } = useHistoryDAL();
   const { workouts } = useWorkoutsDAL();
   const { meals, confirmMeal } = useMealsDAL();
   const { activities, confirmActivity } = useActivitiesDAL();
@@ -86,6 +85,7 @@ export default function AIPage() {
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [menuExpanded, setMenuExpanded] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   
   // PWA Modal state
   const [showEngagementModal, setShowEngagementModal] = useState(false);
@@ -300,23 +300,74 @@ export default function AIPage() {
     }
   }
 
+  function handleNewChat() {
+    if (messages.length === 0) return; // Already empty
+    if (confirm("Start a new coaching conversation? Your current chat will be saved in your history.")) {
+      startNewConversation();
+    }
+  }
+
+  function handleSelectConversation(id: string) {
+    loadConversation(id);
+    setDrawerOpen(false);
+  }
+
+  const todayConvs: ConversationHistoryItem[] = [];
+  const yesterdayConvs: ConversationHistoryItem[] = [];
+  const previousConvs: ConversationHistoryItem[] = [];
+
+  conversations.forEach((c: ConversationHistoryItem) => {
+    const d = parseISO(c.createdAt || new Date().toISOString());
+    if (isToday(d)) todayConvs.push(c);
+    else if (isYesterday(d)) yesterdayConvs.push(c);
+    else previousConvs.push(c);
+  });
+
+  function renderConvItem(c: ConversationHistoryItem) {
+    const isSelected = conversation?.id === c.id;
+    const d = parseISO(c.createdAt || new Date().toISOString());
+    return (
+      <button
+        key={c.id}
+        onClick={() => handleSelectConversation(c.id)}
+        className={cn(
+          "w-full text-left p-3 rounded-[16px] transition-colors",
+          isSelected ? "bg-primary-soft border border-primary/20" : "bg-surface border border-line hover:border-primary/40"
+        )}
+      >
+        <div className="flex items-start gap-2.5">
+          <MessageSquare className={cn("w-4 h-4 mt-0.5 shrink-0", isSelected ? "text-primary" : "text-ink-soft/70")} />
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-[14px] text-ink mb-0.5 truncate">{format(d, "EEEE, d MMM")}</div>
+            <div className="text-[12px] text-ink-soft truncate">
+              Started {format(d, "h:mm a")} • {c.messageCount || 0} messages
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col">
       <div className="flex items-center justify-between border-b border-line bg-surface/90 px-4 py-2.5 backdrop-blur-md sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary">
-              <Bot className="h-4 w-4" />
-            </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-[#335f42]" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[14px] font-bold text-ink leading-tight">Pace AI Coach</span>
-            <span className="text-[11px] text-ink-soft">Online & ready to help</span>
-          </div>
+        <button 
+          onClick={() => setDrawerOpen(true)}
+          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-line transition-colors"
+          aria-label="Coach History"
+        >
+          <Menu className="h-5 w-5 text-ink" />
+        </button>
+        <div className="flex flex-col items-center">
+          <span className="text-[14px] font-bold text-ink leading-tight">Pace AI Coach</span>
+          <span className="text-[11px] text-ink-soft">Online</span>
         </div>
-        <button aria-label="Info">
-          <Info className="h-5 w-5 text-ink-soft" />
+        <button 
+          onClick={handleNewChat}
+          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-line transition-colors text-primary"
+          aria-label="New chat"
+        >
+          <Plus className="h-5 w-5" />
         </button>
       </div>
 
@@ -552,6 +603,58 @@ export default function AIPage() {
         onCloseRemindLater={() => setShowRemindLaterToast(false)}
         onCloseInstallSuccess={() => setShowInstallSuccess(false)}
       />
+
+      {/* Coach History Drawer */}
+      {drawerOpen && (
+        <>
+          <div className="fixed inset-0 bg-ink/20 z-40 transition-opacity" onClick={() => setDrawerOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-[280px] bg-paper shadow-xl z-50 flex flex-col transform transition-transform duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-line">
+              <h2 className="font-display font-bold text-[18px] text-ink">Coach History</h2>
+              <button onClick={() => setDrawerOpen(false)} className="p-1 rounded-full hover:bg-line-soft transition-colors" aria-label="Close history">
+                <X className="w-5 h-5 text-ink-soft" />
+              </button>
+            </div>
+            
+            <div className="p-4 border-b border-line">
+              <button 
+                onClick={handleNewChat}
+                className="w-full flex items-center justify-center gap-2 rounded-[16px] bg-surface text-ink font-bold border border-line py-3 hover:border-primary/50 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4 text-primary" />
+                New chat
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 hide-scrollbar">
+              {todayConvs.length > 0 && (
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-ink-soft mb-2 px-1">Today</h3>
+                  <div className="space-y-2">
+                    {todayConvs.map(renderConvItem)}
+                  </div>
+                </div>
+              )}
+              {yesterdayConvs.length > 0 && (
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-ink-soft mb-2 px-1">Yesterday</h3>
+                  <div className="space-y-2">
+                    {yesterdayConvs.map(renderConvItem)}
+                  </div>
+                </div>
+              )}
+              {previousConvs.length > 0 && (
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-ink-soft mb-2 px-1">Previous</h3>
+                  <div className="space-y-2">
+                    {previousConvs.map(renderConvItem)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

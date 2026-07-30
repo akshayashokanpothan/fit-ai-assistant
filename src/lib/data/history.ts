@@ -7,6 +7,12 @@ import { createClient } from "@/utils/supabase/client";
 import { DEMO_MESSAGES } from "@/lib/demo/seed-data";
 import type { ChatMessage, Conversation } from "@/types";
 
+import { isToday, parseISO } from "date-fns";
+
+export interface ConversationHistoryItem extends Conversation {
+  messageCount: number;
+}
+
 /**
  * Data Access Layer for History (Conversations, Messages).
  * Supports Supabase as primary, demo store as fallback.
@@ -18,6 +24,7 @@ export function useHistoryDAL() {
 
   const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
   const [dbConversation, setDbConversation] = useState<Conversation | null>(null);
+  const [dbConversations, setDbConversations] = useState<ConversationHistoryItem[]>([]);
   // True only while the initial Supabase history fetch is in-flight for an
   // authenticated user. Starts false for unauthenticated/demo paths.
   const [historyLoading, setHistoryLoading] = useState(() => !!user);
@@ -52,54 +59,77 @@ export function useHistoryDAL() {
 
     const fetchHistory = async () => {
       try {
-        // Fetch the user's default conversation
+        // Fetch all user's conversations
         const { data: convData, error: convError } = await supabase
           .from("conversations")
-          .select("*")
+          .select("*, messages(count)")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
+          .order("created_at", { ascending: false });
 
-        if (convError && convError.code !== "PGRST116") {
-          console.error("Error fetching conversation", convError);
+        if (convError) {
+          console.error("Error fetching conversations", convError);
         }
 
         if (convData && isMounted) {
-          setDbConversation({
-            id: convData.id,
-            userId: convData.user_id,
-            title: convData.title,
-            createdAt: convData.created_at,
-            updatedAt: convData.updated_at,
-          });
+          const formattedConvs: ConversationHistoryItem[] = convData.map(c => ({
+            id: c.id,
+            userId: c.user_id,
+            title: c.title,
+            createdAt: c.created_at,
+            updatedAt: c.updated_at,
+            messageCount: c.messages?.[0]?.count || 0
+          }));
+          
+          setDbConversations(formattedConvs);
 
-          // Fetch messages for this conversation
-          const { data: msgData, error: msgError } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("conversation_id", convData.id)
-            .order("created_at", { ascending: true });
+          // Find the active conversation to load.
+          // By default, we load the most recent conversation ONLY IF it was created today.
+          // If the most recent was created yesterday or earlier, we leave dbConversation null
+          // so that the next message creates a new one. (One conversation per day rule).
+          // Exception: If the most recent conversation has 0 messages, we can reuse it even if it's old (though rare).
+          const mostRecent = formattedConvs[0];
+          
+          let activeConv = null;
+          if (mostRecent) {
+             const createdDate = parseISO(mostRecent.createdAt);
+             if (isToday(createdDate) || mostRecent.messageCount === 0) {
+               activeConv = mostRecent;
+             }
+          }
 
-          if (msgError) {
-            console.error("Error fetching messages", msgError);
-          } else if (msgData && isMounted) {
-            setDbMessages(
-              msgData.map((row) => ({
-                id: row.id,
-                conversationId: row.conversation_id,
-                role: row.role as ChatMessage["role"],
-                content: row.content,
-                attachments: row.attachments || [],
-                card: row.card || undefined,
-                createdAt: row.created_at,
-                // Supabase doesn't store 'status'
-                status: "sent",
-              }))
-            );
+          if (activeConv) {
+            setDbConversation(activeConv);
+
+            // Fetch messages for this active conversation
+            const { data: msgData, error: msgError } = await supabase
+              .from("messages")
+              .select("*")
+              .eq("conversation_id", activeConv.id)
+              .order("created_at", { ascending: true });
+
+            if (msgError) {
+              console.error("Error fetching messages", msgError);
+            } else if (msgData) {
+              setDbMessages(
+                msgData.map((row) => ({
+                  id: row.id,
+                  conversationId: row.conversation_id,
+                  role: row.role as ChatMessage["role"],
+                  content: row.content,
+                  attachments: row.attachments || [],
+                  card: row.card || undefined,
+                  createdAt: row.created_at,
+                  status: "sent",
+                }))
+              );
+            }
+          } else {
+            // New day state (or first time user)
+            setDbConversation(null);
+            setDbMessages([]);
           }
         } else if (!convData && isMounted) {
-          // If no conversation exists, that's fine. It'll be created on first message.
+          setDbConversations([]);
           setDbConversation(null);
           setDbMessages([]);
         }
@@ -228,11 +258,64 @@ export function useHistoryDAL() {
     [user, demoStore, supabase]
   );
 
+  const loadConversation = useCallback(async (id: string) => {
+    if (!user) return; // Not supported in demo mode
+    const conv = dbConversations.find(c => c.id === id);
+    if (!conv) return;
+    
+    setHistoryLoading(true);
+    setDbConversation(conv);
+    
+    try {
+      const { data: msgData, error: msgError } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conv.id)
+        .order("created_at", { ascending: true });
+
+      if (msgError) throw msgError;
+
+      if (msgData) {
+        setDbMessages(
+          msgData.map((row) => ({
+            id: row.id,
+            conversationId: row.conversation_id,
+            role: row.role as ChatMessage["role"],
+            content: row.content,
+            attachments: row.attachments || [],
+            card: row.card || undefined,
+            createdAt: row.created_at,
+            status: "sent",
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load conversation messages", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [user, dbConversations, supabase]);
+
+  const startNewConversation = useCallback(() => {
+    if (!user) {
+      // Demo mode doesn't support multiple conversations, but we can clear messages
+      demoStore.resetDemo(); // Optionally clear demo state entirely, or just ignore.
+      return;
+    }
+    // Set active conversation to null, which drops the current chat. 
+    // New conversation will be created on first message insert.
+    setDbConversation(null);
+    setDbMessages([]);
+  }, [user, demoStore]);
+
   return {
     messages,
     conversation,
+    conversations: user ? dbConversations : [{ ...demoStore.state.conversation, messageCount: demoStore.state.messages.length }],
     addMessage,
     updateMessage,
     historyLoading,
+    loadConversation,
+    startNewConversation
   };
 }
