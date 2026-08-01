@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/avatar";
 import { ProfileImageCropper } from "@/components/profile-image-cropper";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { cn } from "@/lib/utils";
 import type {
@@ -114,6 +115,7 @@ export default function ProfilePage() {
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -522,7 +524,7 @@ export default function ProfilePage() {
 
          <div>
            <div className="rounded-[20px] border border-danger/20 overflow-hidden bg-danger/5">
-             <ActionRow icon={<LogOut className="w-5 h-5" />} title="Logout" description="Sign out of your account" danger onClick={handleLogout} />
+             <ActionRow icon={<LogOut className="w-5 h-5" />} title="Logout" description="Sign out of your account" danger onClick={() => setConfirmLogout(true)} />
            </div>
          </div>
       </div>
@@ -546,6 +548,24 @@ export default function ProfilePage() {
         {saveError && <p className="mt-2 text-center text-sm text-danger">{saveError}</p>}
       </div>
 
+      <Dialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <DialogContent className="max-w-[320px] p-0 overflow-hidden bg-surface rounded-[24px]">
+          <div className="p-6 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-danger-soft flex items-center justify-center mb-4">
+              <LogOut className="w-6 h-6 text-danger" />
+            </div>
+            <h2 className="text-[20px] font-bold text-ink mb-2">Sign out?</h2>
+            <p className="text-[14px] text-ink-soft mb-6 leading-relaxed">
+              You'll be signed out of your Pace AI account.<br /><br />
+              Your health data and progress are safely saved and will be available when you sign back in.
+            </p>
+            <div className="flex flex-col gap-3 w-full">
+              <Button variant="danger" className="w-full rounded-full" onClick={handleLogout}>Sign out</Button>
+              <Button variant="ghost" className="w-full rounded-full border border-line" onClick={() => setConfirmLogout(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
