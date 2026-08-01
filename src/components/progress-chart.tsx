@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ChevronUp } from "lucide-react";
 import type { Meal, Activity, Profile } from "@/types";
 import { estimateDailyTargets } from "@/lib/nutrition/targets";
 
@@ -18,6 +19,7 @@ interface MetricConfig {
   id: MetricId;
   label: string;
   color: string;
+  max: number;
   getDailyValue: (meals: Meal[], activities: Activity[], isoDate: string) => number | null;
   getTargetValue?: (targets: { kcal: number; proteinG: number }) => number | null;
 }
@@ -27,6 +29,7 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     id: "proteinConsumed",
     label: "Protein",
     color: "#335f42",
+    max: 200,
     getDailyValue: (meals, _, isoDate) => {
       const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
       if (dayMeals.length === 0) return null;
@@ -38,6 +41,7 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     id: "caloriesConsumed",
     label: "Calories (In)",
     color: "#f97316",
+    max: 2500,
     getDailyValue: (meals, _, isoDate) => {
       const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
       if (dayMeals.length === 0) return null;
@@ -49,6 +53,7 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     id: "fatConsumed",
     label: "Fat",
     color: "#eab308",
+    max: 100,
     getDailyValue: (meals, _, isoDate) => {
       const dayMeals = meals.filter(m => m.eventTime.startsWith(isoDate) && m.confirmationState === "confirmed");
       if (dayMeals.length === 0) return null;
@@ -59,6 +64,7 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     id: "caloriesBurned",
     label: "Calories (Out)",
     color: "#ef4444",
+    max: 1000,
     getDailyValue: (_, activities, isoDate) => {
       const dayActs = activities.filter(a => a.eventDate === isoDate && a.confirmationState === "confirmed");
       if (dayActs.length === 0) return null;
@@ -66,13 +72,6 @@ const METRICS_CONFIG: Record<MetricId, MetricConfig> = {
     },
   }
 };
-
-function getNiceMax(val: number) {
-  if (val <= 0) return 10;
-  const target = val * 1.2;
-  const power = Math.pow(10, Math.max(0, Math.floor(Math.log10(target)) - 1));
-  return Math.ceil(target / power) * power;
-}
 
 export function ProgressChart({ meals, activities, profile }: ProgressChartProps) {
   const [metric1, setMetric1] = useState<MetricId>("proteinConsumed");
@@ -140,16 +139,21 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
   const padding = { top: 40, bottom: 40, left: 16, right: 16 };
   const chartHeight = height - padding.top - padding.bottom;
 
-  const valid1 = data.map(d => d.val1).filter((v): v is number => v !== null);
-  const max1 = Math.max(...valid1, target1 || 0);
-  const valid2 = data.map(d => d.val2).filter((v): v is number => v !== null);
-  const max2 = Math.max(...valid2, target2 || 0);
-  
-  const yMax1 = getNiceMax(max1);
-  const yMax2 = getNiceMax(max2);
+  const m1Config = METRICS_CONFIG[metric1];
+  const m2Config = METRICS_CONFIG[metric2];
 
-  const getY1 = (val: number) => padding.top + chartHeight - (val / yMax1) * chartHeight;
-  const getY2 = (val: number) => padding.top + chartHeight - (val / yMax2) * chartHeight;
+  const yMax1 = m1Config.max;
+  const yMax2 = m2Config.max;
+
+  const getY1 = (val: number) => {
+    const clamped = Math.min(val, yMax1);
+    return padding.top + chartHeight - (clamped / yMax1) * chartHeight;
+  };
+  const getY2 = (val: number) => {
+    const clamped = Math.min(val, yMax2);
+    return padding.top + chartHeight - (clamped / yMax2) * chartHeight;
+  };
+  
   const getX = (index: number) => {
     // Add padding to the left and right inside the SVG container space so dots aren't clipped
     return padding.left + (index / 6) * (100 - padding.left - padding.right); 
@@ -158,9 +162,6 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
      // Return percentage string for HTML positioning overlay
      return `${getX(index)}%`;
   }
-
-  const m1Config = METRICS_CONFIG[metric1];
-  const m2Config = METRICS_CONFIG[metric2];
 
   let path1 = "";
   let path1Started = false;
@@ -263,7 +264,7 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
         <div className="absolute right-0 top-0 bottom-[30px] w-[14.28%] bg-black/5 rounded-[12px] -z-10 pointer-events-none" />
 
         {/* Y-axis grid lines and labels */}
-        {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
+        {[0, 0.2, 0.4, 0.6, 0.8, 1].map(ratio => {
            const y = padding.top + chartHeight - ratio * chartHeight;
            const val1 = Math.round(yMax1 * ratio);
            const val2 = Math.round(yMax2 * ratio);
@@ -330,30 +331,50 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
           return (
             <div key={i} className="absolute inset-0 pointer-events-none z-20">
               {point.val1 !== null && (
-                <div 
-                  className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
-                  style={{
-                    left: xPct,
-                    top: `${getY1(point.val1)}px`,
-                    width: '8px', height: '8px',
-                    border: `2px solid ${m1Config.color}`,
-                    transform: 'translate(-50%, -50%)',
-                    boxShadow: isSparse ? `0 0 0 4px ${m1Config.color}33` : undefined,
-                  }}
-                />
+                <>
+                  <div 
+                    className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
+                    style={{
+                      left: xPct,
+                      top: `${getY1(point.val1)}px`,
+                      width: '8px', height: '8px',
+                      border: `2px solid ${m1Config.color}`,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: isSparse ? `0 0 0 4px ${m1Config.color}33` : undefined,
+                    }}
+                  />
+                  {point.val1 > yMax1 && (
+                    <div 
+                      className="absolute transform -translate-x-1/2 -translate-y-[14px]"
+                      style={{ left: xPct, top: `${getY1(point.val1)}px`, color: m1Config.color }}
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </div>
+                  )}
+                </>
               )}
               {point.val2 !== null && (
-                <div 
-                  className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
-                  style={{
-                    left: xPct,
-                    top: `${getY2(point.val2)}px`,
-                    width: '8px', height: '8px',
-                    border: `2px solid ${m2Config.color}`,
-                    transform: 'translate(-50%, -50%)',
-                    boxShadow: isSparse ? `0 0 0 4px ${m2Config.color}33` : undefined,
-                  }}
-                />
+                <>
+                  <div 
+                    className={cn("absolute bg-white rounded-full shadow-sm", isSparse && "animate-pulse")}
+                    style={{
+                      left: xPct,
+                      top: `${getY2(point.val2)}px`,
+                      width: '8px', height: '8px',
+                      border: `2px solid ${m2Config.color}`,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: isSparse ? `0 0 0 4px ${m2Config.color}33` : undefined,
+                    }}
+                  />
+                  {point.val2 > yMax2 && (
+                    <div 
+                      className="absolute transform -translate-x-1/2 -translate-y-[14px]"
+                      style={{ left: xPct, top: `${getY2(point.val2)}px`, color: m2Config.color }}
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );
