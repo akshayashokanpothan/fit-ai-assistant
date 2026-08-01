@@ -163,50 +163,31 @@ export function ProgressChart({ meals, activities, profile }: ProgressChartProps
      return `${getX(index)}%`;
   }
 
-  let path1 = "";
-  let path1Started = false;
-  let path1PrevX = 0;
-  let path1PrevY = 0;
-
-  let path2 = "";
-  let path2Started = false;
-  let path2PrevX = 0;
-  let path2PrevY = 0;
-  
   const validCount1 = data.filter(d => d.val1 !== null).length;
   const validCount2 = data.filter(d => d.val2 !== null).length;
   const isSparse = validCount1 <= 1 && validCount2 <= 1 && (validCount1 + validCount2) > 0;
   
-  data.forEach((d, i) => {
-    const x = getX(i);
-    if (d.val1 !== null) {
-      const y1 = getY1(d.val1);
-      if (!path1Started) {
-        path1 += `M ${x} ${y1}`;
-        path1Started = true;
-      } else {
-        const cpX = path1PrevX + (x - path1PrevX) / 2;
-        path1 += ` C ${cpX} ${path1PrevY}, ${cpX} ${y1}, ${x} ${y1}`;
-      }
-      path1PrevX = x;
-      path1PrevY = y1;
+  let path1 = "";
+  const validPoints1 = data.map((d, i) => ({ x: getX(i), y: d.val1 !== null ? getY1(d.val1) : null })).filter((p): p is {x: number, y: number} => p.y !== null);
+  validPoints1.forEach((p, i) => {
+    if (i === 0) {
+      path1 += `M ${p.x} ${p.y}`;
     } else {
-      path1Started = false;
+      const prev = validPoints1[i - 1];
+      const cpX = prev.x + (p.x - prev.x) / 2;
+      path1 += ` C ${cpX} ${prev.y}, ${cpX} ${p.y}, ${p.x} ${p.y}`;
     }
+  });
 
-    if (d.val2 !== null) {
-      const y2 = getY2(d.val2);
-      if (!path2Started) {
-        path2 += `M ${x} ${y2}`;
-        path2Started = true;
-      } else {
-        const cpX = path2PrevX + (x - path2PrevX) / 2;
-        path2 += ` C ${cpX} ${path2PrevY}, ${cpX} ${y2}, ${x} ${y2}`;
-      }
-      path2PrevX = x;
-      path2PrevY = y2;
+  let path2 = "";
+  const validPoints2 = data.map((d, i) => ({ x: getX(i), y: d.val2 !== null ? getY2(d.val2) : null })).filter((p): p is {x: number, y: number} => p.y !== null);
+  validPoints2.forEach((p, i) => {
+    if (i === 0) {
+      path2 += `M ${p.x} ${p.y}`;
     } else {
-      path2Started = false;
+      const prev = validPoints2[i - 1];
+      const cpX = prev.x + (p.x - prev.x) / 2;
+      path2 += ` C ${cpX} ${prev.y}, ${cpX} ${p.y}, ${p.x} ${p.y}`;
     }
   });
 
