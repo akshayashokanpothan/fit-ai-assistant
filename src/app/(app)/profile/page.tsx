@@ -556,7 +556,7 @@ export default function ProfilePage() {
             </div>
             <h2 className="text-[20px] font-bold text-ink mb-2">Sign out?</h2>
             <p className="text-[14px] text-ink-soft mb-6 leading-relaxed">
-              You'll be signed out of your Pace AI account.<br /><br />
+              You&apos;ll be signed out of your Pace AI account.<br /><br />
               Your health data and progress are safely saved and will be available when you sign back in.
             </p>
             <div className="flex flex-col gap-3 w-full">
